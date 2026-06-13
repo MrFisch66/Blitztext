@@ -1,0 +1,120 @@
+<Window x:Class="Blitztext.Windows.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Blitztext" Height="820" Width="560"
+        MinHeight="720" MinWidth="520"
+        ResizeMode="CanResize"
+        WindowStartupLocation="CenterScreen"
+        Background="#F5F7FB">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Padding="22,18" Background="#111827">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <Border Width="48" Height="48" CornerRadius="12" ClipToBounds="True">
+                    <Image Source="Assets/AppIcon.png" Stretch="UniformToFill" />
+                </Border>
+
+                <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="Blitztext" FontSize="21" FontWeight="SemiBold" Foreground="White" />
+                    <TextBlock x:Name="StatusText" Text="Bereit" Margin="0,4,0,0" Foreground="#CBD5E1" TextWrapping="Wrap" />
+                </StackPanel>
+
+                <TextBlock x:Name="VersionText" Grid.Column="2" VerticalAlignment="Top" HorizontalAlignment="Right"
+                           Foreground="#64748B" FontSize="12" Text="v0.0.0" />
+            </Grid>
+        </Border>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="18">
+                <Border Padding="16" Background="White" BorderBrush="#E3E7EF" BorderThickness="1" CornerRadius="10">
+                    <StackPanel>
+                        <TextBlock Text="Tastenkürzel" Style="{StaticResource SectionTitle}" />
+                        <TextBlock Text="Lege fest, mit welchen Tasten die Workflows ausgelöst werden – auch reine Modifier wie Ctrl + Win. Am schnellsten per Linksklick auf das Blitztext-Symbol am unteren Bildschirmrand." Style="{StaticResource HelpText}" Margin="0,0,0,8" />
+                        <Button Content="Tastenkürzel ändern …" Click="OpenHotkeysButton_Click" />
+                    </StackPanel>
+                </Border>
+
+                <Border Padding="16" Margin="0,14,0,0" Background="White" BorderBrush="#E3E7EF" BorderThickness="1" CornerRadius="10">
+                    <StackPanel>
+                        <TextBlock Text="Zugang &amp; Start" Style="{StaticResource SectionTitle}" />
+                        <TextBlock x:Name="ApiKeyStatusText" Style="{StaticResource HelpText}" />
+                        <PasswordBox x:Name="ApiKeyBox" />
+                        <Button Content="API Key speichern" Click="SaveApiKeyButton_Click" />
+                        <CheckBox x:Name="StartupCheckBox" Content="Blitztext beim Anmelden starten" Checked="StartupCheckBox_Changed" Unchecked="StartupCheckBox_Changed" />
+                        <Button Content="Lokale Einstellungen und Key löschen" Click="CleanupButton_Click" />
+                    </StackPanel>
+                </Border>
+
+                <Border Padding="16" Margin="0,14,0,0" Background="White" BorderBrush="#E3E7EF" BorderThickness="1" CornerRadius="10">
+                    <StackPanel>
+                        <TextBlock Text="Arbeitsweise" Style="{StaticResource SectionTitle}" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,8,0">
+                                <TextBlock Text="Hotkey-Modus" Style="{StaticResource HelpText}" />
+                                <ComboBox x:Name="HotkeyModeCombo" SelectionChanged="SettingsControl_Changed" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                <TextBlock Text="Sprache" Style="{StaticResource HelpText}" />
+                                <TextBox x:Name="LanguageTextBox" TextChanged="SettingsTextBox_Changed" />
+                            </StackPanel>
+                        </Grid>
+                        <CheckBox x:Name="SecureLocalModeCheckBox" Content="Sicherer lokaler Modus" Checked="SettingsControl_Changed" Unchecked="SettingsControl_Changed" />
+                    </StackPanel>
+                </Border>
+
+                <Border Padding="16" Margin="0,14,0,0" Background="White" BorderBrush="#E3E7EF" BorderThickness="1" CornerRadius="10">
+                    <StackPanel>
+                        <TextBlock Text="Schreiben" Style="{StaticResource SectionTitle}" />
+                        <TextBlock Text="Schreibstil" Style="{StaticResource HelpText}" />
+                        <ComboBox x:Name="ToneCombo" SelectionChanged="SettingsControl_Changed" />
+
+                        <TextBlock Text="Eigennamen, kommagetrennt" Style="{StaticResource HelpText}" />
+                        <TextBox x:Name="CustomTermsTextBox" TextChanged="SettingsTextBox_Changed" />
+
+                        <TextBlock Text="Kontext" Style="{StaticResource HelpText}" />
+                        <TextBox x:Name="ContextTextBox" TextChanged="SettingsTextBox_Changed" />
+
+                        <TextBlock Text="Blitztext+ Anweisung" Style="{StaticResource HelpText}" />
+                        <TextBox x:Name="ImproverPromptTextBox" AcceptsReturn="True" Height="86" TextWrapping="Wrap" TextChanged="SettingsTextBox_Changed" />
+
+                        <TextBlock Text="Blitztext $%&amp;! Anweisung" Style="{StaticResource HelpText}" />
+                        <TextBox x:Name="DampfPromptTextBox" AcceptsReturn="True" Height="104" TextWrapping="Wrap" TextChanged="SettingsTextBox_Changed" />
+
+                        <TextBlock Text="Emoji-Dichte" Style="{StaticResource HelpText}" />
+                        <ComboBox x:Name="EmojiDensityCombo" SelectionChanged="SettingsControl_Changed" />
+                    </StackPanel>
+                </Border>
+
+                <Border Padding="16" Margin="0,14,0,18" Background="White" BorderBrush="#E3E7EF" BorderThickness="1" CornerRadius="10">
+                    <StackPanel>
+                        <TextBlock Text="Lokales Whisper" Style="{StaticResource SectionTitle}" />
+                        <TextBlock Text="Runtime" Style="{StaticResource HelpText}" />
+                        <TextBlock x:Name="LocalRuntimeStatusText" Style="{StaticResource HelpText}" Margin="0,0,0,6" />
+                        <Button x:Name="InstallRuntimeButton" Content="whisper.cpp installieren" Click="InstallRuntimeButton_Click" />
+                        <ProgressBar x:Name="RuntimeProgressBar" Height="8" Minimum="0" Maximum="1" Visibility="Collapsed" Margin="0,0,0,12" />
+
+                        <TextBlock Text="Modell" Style="{StaticResource HelpText}" />
+                        <ComboBox x:Name="LocalModelCombo" SelectionChanged="SettingsControl_Changed" />
+                        <Button x:Name="InstallModelButton" Content="Ausgewähltes Modell installieren" Click="InstallModelButton_Click" />
+                        <ProgressBar x:Name="ModelProgressBar" Height="8" Minimum="0" Maximum="1" Visibility="Collapsed" />
+                        <TextBlock x:Name="LocalModelStatusText" Style="{StaticResource HelpText}" Margin="0,8,0,0" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Window>
