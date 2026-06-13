@@ -17,7 +17,7 @@ This is a learning and experimentation project, not a polished product.
 
 ## Important Preview Notes
 
-- macOS only.
+- macOS app is the original preview. A native Windows preview scaffold now lives alongside it.
 - Bring your own OpenAI API key.
 - No hosted Blitztext backend is included or provided.
 - In online mode, audio and text are sent directly from the app to the OpenAI API.
@@ -66,6 +66,8 @@ brew install xcodegen
 
 ## Build And Run
 
+### macOS
+
 ```bash
 git clone https://github.com/cmagnussen/blitztext-app.git
 cd blitztext-app
@@ -85,6 +87,18 @@ On first launch, either paste your own OpenAI API key for online workflows or in
 For fully local transcription, install a WhisperKit CoreML model and enable **Sicherer Lokaler Modus** in the app.
 
 For a slower, more explicit walkthrough, see [docs/setup.md](docs/setup.md).
+
+### Windows Preview
+
+The Windows port is a native .NET 8 WPF tray app. It uses Windows global hotkeys, Windows Credential Manager, WAV microphone recording, `SendInput` paste, OpenAI transcription/rewrites, and a `whisper.cpp`-based local transcription adapter.
+
+```powershell
+dotnet build .\Blitztext.sln -c Release
+dotnet test .\Blitztext.sln -c Release
+.\build-windows.ps1 -Configuration Release
+```
+
+Published files are written to `artifacts/windows/win-x64`. MSIX packaging scaffolding lives in `src/Blitztext.Packaging`; see [docs/windows-port.md](docs/windows-port.md).
 
 ## Permissions
 
@@ -119,7 +133,14 @@ BlitztextMac/
   Features/     Workflows, menu bar UI, settings
   Services/     Recording, OpenAI calls, hotkeys, local storage
   Views/        Shared SwiftUI views
+src/
+  Blitztext.Core/                 Shared Windows workflow logic and OpenAI clients
+  Blitztext.LocalTranscription/   whisper.cpp local transcription adapter
+  Blitztext.Platform.Windows/     Windows hotkeys, audio, paste, credentials, startup
+  Blitztext.Windows/              WPF tray app
+  Blitztext.Packaging/            MSIX packaging scaffold
 build.sh        Local build script
+build-windows.ps1 Windows build/publish script
 docs/           Setup, privacy, roadmap, preflight, landing page notes
 ```
 

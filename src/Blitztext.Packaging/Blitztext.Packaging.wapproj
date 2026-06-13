@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\Microsoft\DesktopBridge\Microsoft.DesktopBridge.props" />
+
+  <PropertyGroup>
+    <ProjectGuid>{7B62478B-A70D-4F20-BA4F-F50F02F53F73}</ProjectGuid>
+    <TargetPlatformIdentifier>UAP</TargetPlatformIdentifier>
+    <TargetPlatformVersion>10.0.26100.0</TargetPlatformVersion>
+    <TargetPlatformMinVersion>10.0.19045.0</TargetPlatformMinVersion>
+    <DefaultLanguage>de-DE</DefaultLanguage>
+    <AppxPackageSigningEnabled>false</AppxPackageSigningEnabled>
+    <GenerateAppInstallerFile>false</GenerateAppInstallerFile>
+    <AppxAutoIncrementPackageRevision>true</AppxAutoIncrementPackageRevision>
+    <EntryPointProjectUniqueName>..\Blitztext.Windows\Blitztext.Windows.csproj</EntryPointProjectUniqueName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AppxManifest Include="Package.appxmanifest">
+      <SubType>Designer</SubType>
+    </AppxManifest>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\StoreLogo.png" />
+    <Content Include="Assets\Square150x150Logo.png" />
+    <Content Include="Assets\Square44x44Logo.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Blitztext.Windows\Blitztext.Windows.csproj">
+      <Project>{AF3D8CE4-35F8-4D9C-85B6-21068CDA1E43}</Project>
+      <Name>Blitztext.Windows</Name>
+      <SkipGetTargetFrameworkProperties>True</SkipGetTargetFrameworkProperties>
+    </ProjectReference>
+  </ItemGroup>
+
+  <Import Project="$(MSBuildExtensionsPath)\Microsoft\DesktopBridge\Microsoft.DesktopBridge.targets" />
+</Project>

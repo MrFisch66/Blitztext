@@ -16,6 +16,7 @@ build/
 # Local app artifacts
 Blitztext.app
 dist/
+artifacts/
 models/
 *.mlmodel
 *.mlmodelc/
@@ -30,3 +31,10 @@ Secrets.swift
 
 # Tooling
 node_modules/
+.vs/
+bin/
+obj/
+TestResults/
+*.user
+*.suo
+*.nupkg
