@@ -21,13 +21,4 @@ public sealed class PromptBuilderTests
         Assert.Contains("E-Mails an Kunden", prompt);
         Assert.Contains("Blackboat, Blitztext", prompt);
     }
-
-    [Fact]
-    public void BuildEmojiSystemPrompt_UsesDensityInstruction()
-    {
-        var prompt = PromptBuilder.BuildEmojiSystemPrompt(EmojiDensity.Wenig);
-
-        Assert.Contains("maximal 1-2", prompt);
-        Assert.Contains("Gib NUR", prompt);
-    }
 }

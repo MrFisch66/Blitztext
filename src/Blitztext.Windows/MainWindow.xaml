@@ -90,12 +90,6 @@
 
                         <TextBlock Text="Blitztext+ Anweisung" Style="{StaticResource HelpText}" />
                         <TextBox x:Name="ImproverPromptTextBox" AcceptsReturn="True" Height="86" TextWrapping="Wrap" TextChanged="SettingsTextBox_Changed" />
-
-                        <TextBlock Text="Blitztext $%&amp;! Anweisung" Style="{StaticResource HelpText}" />
-                        <TextBox x:Name="DampfPromptTextBox" AcceptsReturn="True" Height="104" TextWrapping="Wrap" TextChanged="SettingsTextBox_Changed" />
-
-                        <TextBlock Text="Emoji-Dichte" Style="{StaticResource HelpText}" />
-                        <ComboBox x:Name="EmojiDensityCombo" SelectionChanged="SettingsControl_Changed" />
                     </StackPanel>
                 </Border>
 

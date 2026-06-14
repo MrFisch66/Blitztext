@@ -45,9 +45,7 @@ public interface ITranscriptionBackend
 
 public enum RewriteOperation
 {
-    Improve,
-    DampfAblassen,
-    AddEmojis
+    Improve
 }
 
 public sealed record TextRewriteRequest(

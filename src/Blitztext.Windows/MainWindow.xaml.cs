@@ -61,17 +61,14 @@ public partial class MainWindow : Window
 
             HotkeyModeCombo.ItemsSource = Enum.GetValues<HotkeyMode>();
             ToneCombo.ItemsSource = Enum.GetValues<TextTone>();
-            EmojiDensityCombo.ItemsSource = Enum.GetValues<EmojiDensity>();
 
             HotkeyModeCombo.SelectedItem = _settings.App.HotkeyMode;
             ToneCombo.SelectedItem = _settings.TextImprovement.Tone;
-            EmojiDensityCombo.SelectedItem = _settings.EmojiText.EmojiDensity;
             SecureLocalModeCheckBox.IsChecked = _settings.App.SecureLocalModeEnabled;
             LanguageTextBox.Text = _settings.Transcription.Language;
             CustomTermsTextBox.Text = string.Join(", ", _settings.TextImprovement.CustomTerms);
             ContextTextBox.Text = _settings.TextImprovement.Context;
             ImproverPromptTextBox.Text = _settings.TextImprovement.SystemPrompt;
-            DampfPromptTextBox.Text = _settings.DampfAblassen.SystemPrompt;
             StartupCheckBox.IsChecked = _startupService.IsEnabled();
 
             _hotkeyService.Mode = _settings.App.HotkeyMode;
@@ -403,8 +400,6 @@ public partial class MainWindow : Window
             .ToList();
         _settings.TextImprovement.Context = ContextTextBox.Text.Trim();
         _settings.TextImprovement.SystemPrompt = ImproverPromptTextBox.Text.Trim();
-        _settings.DampfAblassen.SystemPrompt = DampfPromptTextBox.Text.Trim();
-        _settings.EmojiText.EmojiDensity = EmojiDensityCombo.SelectedItem is EmojiDensity density ? density : EmojiDensity.Mittel;
 
         if (LocalModelCombo.SelectedValue is string selectedModel)
         {
@@ -433,8 +428,8 @@ public partial class MainWindow : Window
             WorkflowType.Transcription when _settings.App.SecureLocalModeEnabled && !localRuntimeInstalled => "whisper.cpp fehlt. Installiere die Runtime im Bereich 'Lokales Whisper'.",
             WorkflowType.Transcription when _settings.App.SecureLocalModeEnabled && !selectedLocalModelInstalled => "Lokales Whisper-Modell fehlt.",
             WorkflowType.Transcription when !_settings.App.SecureLocalModeEnabled && !hasApiKey => "OpenAI API Key fehlt.",
-            WorkflowType.TextImprover or WorkflowType.DampfAblassen or WorkflowType.EmojiText when _settings.App.SecureLocalModeEnabled => "Rewrite-Workflows sind im sicheren lokalen Modus pausiert.",
-            WorkflowType.TextImprover or WorkflowType.DampfAblassen or WorkflowType.EmojiText when !hasApiKey => "OpenAI API Key fehlt.",
+            WorkflowType.TextImprover when _settings.App.SecureLocalModeEnabled => "Blitztext+ ist im sicheren lokalen Modus pausiert.",
+            WorkflowType.TextImprover when !hasApiKey => "OpenAI API Key fehlt.",
             _ => null
         };
     }

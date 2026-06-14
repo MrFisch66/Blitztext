@@ -98,14 +98,6 @@ public sealed class BlitztextWorkflowRunner(
                     "Text wird verbessert ...",
                     PromptBuilder.BuildImproveRequest(cleanedRawText, _settings.TextImprovement),
                     cancellationToken),
-                WorkflowType.DampfAblassen => await RewriteAsync(
-                    "Wird umformuliert ...",
-                    PromptBuilder.BuildDampfAblassenRequest(cleanedRawText, _settings.DampfAblassen),
-                    cancellationToken),
-                WorkflowType.EmojiText => await RewriteAsync(
-                    "Emojis werden eingefügt ...",
-                    PromptBuilder.BuildEmojiRequest(cleanedRawText, _settings.EmojiText),
-                    cancellationToken),
                 _ => cleanedRawText
             };
 

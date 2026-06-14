@@ -69,44 +69,6 @@
             </Grid>
         </Border>
 
-        <Border Padding="12" Margin="0,0,0,10" Background="White" BorderBrush="#E3E7EF" BorderThickness="1" CornerRadius="8">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="150" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="Blitztext $%&amp;!" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" />
-                    <TextBlock Text="Frust rein. Entspannt raus." Style="{StaticResource HelpText}" />
-                </StackPanel>
-                <TextBox x:Name="DampfHotkeyBox" Grid.Column="1" Margin="10,0,0,0" IsReadOnly="True"
-                         PreviewKeyDown="Hotkey_PreviewKeyDown" PreviewKeyUp="Hotkey_PreviewKeyUp"
-                         GotKeyboardFocus="Hotkey_GotKeyboardFocus" LostKeyboardFocus="Hotkey_LostKeyboardFocus" />
-                <CheckBox x:Name="DampfEnabledCheckBox" Grid.Column="2" Content="Aktiv" Margin="12,0,0,0"
-                          VerticalAlignment="Center" Checked="Enabled_Changed" Unchecked="Enabled_Changed" />
-            </Grid>
-        </Border>
-
-        <Border Padding="12" Margin="0,0,0,10" Background="White" BorderBrush="#E3E7EF" BorderThickness="1" CornerRadius="8">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="150" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="Blitztext :)" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" />
-                    <TextBlock Text="Text rein. Emojis dazu." Style="{StaticResource HelpText}" />
-                </StackPanel>
-                <TextBox x:Name="EmojiHotkeyBox" Grid.Column="1" Margin="10,0,0,0" IsReadOnly="True"
-                         PreviewKeyDown="Hotkey_PreviewKeyDown" PreviewKeyUp="Hotkey_PreviewKeyUp"
-                         GotKeyboardFocus="Hotkey_GotKeyboardFocus" LostKeyboardFocus="Hotkey_LostKeyboardFocus" />
-                <CheckBox x:Name="EmojiEnabledCheckBox" Grid.Column="2" Content="Aktiv" Margin="12,0,0,0"
-                          VerticalAlignment="Center" Checked="Enabled_Changed" Unchecked="Enabled_Changed" />
-            </Grid>
-        </Border>
-
         <TextBlock x:Name="StatusLabel" Style="{StaticResource HelpText}" Margin="2,4,0,0" Text="" />
         <Button x:Name="CloseButton" Content="Schließen" Click="CloseButton_Click" HorizontalAlignment="Right" Margin="0,12,0,0" MinWidth="110" />
     </StackPanel>

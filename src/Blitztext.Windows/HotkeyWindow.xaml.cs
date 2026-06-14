@@ -49,17 +49,13 @@ public partial class HotkeyWindow : Window
         {
             [WorkflowType.Transcription] = TranscriptionHotkeyBox,
             [WorkflowType.LocalTranscription] = LocalTranscriptionHotkeyBox,
-            [WorkflowType.TextImprover] = TextImproverHotkeyBox,
-            [WorkflowType.DampfAblassen] = DampfHotkeyBox,
-            [WorkflowType.EmojiText] = EmojiHotkeyBox
+            [WorkflowType.TextImprover] = TextImproverHotkeyBox
         };
         _checks = new Dictionary<WorkflowType, CheckBox>
         {
             [WorkflowType.Transcription] = TranscriptionEnabledCheckBox,
             [WorkflowType.LocalTranscription] = LocalTranscriptionEnabledCheckBox,
-            [WorkflowType.TextImprover] = TextImproverEnabledCheckBox,
-            [WorkflowType.DampfAblassen] = DampfEnabledCheckBox,
-            [WorkflowType.EmojiText] = EmojiEnabledCheckBox
+            [WorkflowType.TextImprover] = TextImproverEnabledCheckBox
         };
 
         IsVisibleChanged += OnIsVisibleChanged;

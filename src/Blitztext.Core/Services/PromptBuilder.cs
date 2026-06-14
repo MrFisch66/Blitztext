@@ -7,7 +7,6 @@ namespace Blitztext.Core.Services;
 public static class PromptBuilder
 {
     public const string FastEditModel = "gpt-4o-mini";
-    public const string RageModeModel = "gpt-4o";
 
     public static TextRewriteRequest BuildImproveRequest(string text, TextImprovementSettings settings)
     {
@@ -15,26 +14,6 @@ public static class PromptBuilder
             RewriteOperation.Improve,
             text,
             BuildTextImprovementPrompt(settings),
-            FastEditModel,
-            0.3);
-    }
-
-    public static TextRewriteRequest BuildDampfAblassenRequest(string text, DampfAblassenSettings settings)
-    {
-        return new TextRewriteRequest(
-            RewriteOperation.DampfAblassen,
-            text,
-            settings.SystemPrompt,
-            RageModeModel,
-            0.4);
-    }
-
-    public static TextRewriteRequest BuildEmojiRequest(string text, EmojiTextSettings settings)
-    {
-        return new TextRewriteRequest(
-            RewriteOperation.AddEmojis,
-            text,
-            BuildEmojiSystemPrompt(settings.EmojiDensity),
             FastEditModel,
             0.3);
     }
@@ -78,18 +57,5 @@ public static class PromptBuilder
         }
 
         return builder.ToString();
-    }
-
-    public static string BuildEmojiSystemPrompt(EmojiDensity density)
-    {
-        var densityInstruction = density switch
-        {
-            EmojiDensity.Wenig => "Setze nur vereinzelt Emojis ein, maximal 1-2 pro Absatz.",
-            EmojiDensity.Mittel => "Setze regelmäßig passende Emojis ein, etwa alle 1-2 Sätze.",
-            EmojiDensity.Viel => "Setze großzügig Emojis ein, gerne mehrere pro Satz.",
-            _ => "Setze passende Emojis ein."
-        };
-
-        return $"Du erhältst ein gesprochenes Transkript. Gib den Text möglichst originalgetreu zurück, aber füge passende Emojis ein. {densityInstruction} Korrigiere offensichtliche Sprach- und Grammatikfehler. Behalte den Stil und die Bedeutung bei. Gib NUR den Text mit Emojis zurück, keine Erklärungen.";
     }
 }
