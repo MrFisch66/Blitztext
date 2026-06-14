@@ -1,0 +1,70 @@
+<UserControl x:Class="Blitztext.Windows.HotkeyEditorControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel>
+        <TextBlock Text="Klicke ein Feld an und drücke die gewünschte Kombination. Reine Modifier wie Ctrl + Win sind erlaubt (mindestens zwei Tasten). Escape setzt den Standard zurück."
+                   Style="{StaticResource HelpText}" Margin="0,0,0,12" />
+
+        <Border Padding="12" Margin="0,0,0,10" Background="{StaticResource PanelBrush}"
+                BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="150" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="Blitztext" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" />
+                    <TextBlock Text="Sprache rein. Text raus." Style="{StaticResource HelpText}" />
+                </StackPanel>
+                <TextBox x:Name="TranscriptionHotkeyBox" Grid.Column="1" Margin="10,0,0,0" IsReadOnly="True"
+                         PreviewKeyDown="Hotkey_PreviewKeyDown" PreviewKeyUp="Hotkey_PreviewKeyUp"
+                         GotKeyboardFocus="Hotkey_GotKeyboardFocus" LostKeyboardFocus="Hotkey_LostKeyboardFocus" />
+                <CheckBox x:Name="TranscriptionEnabledCheckBox" Grid.Column="2" Content="Aktiv" Margin="12,0,0,0"
+                          VerticalAlignment="Center" Checked="Enabled_Changed" Unchecked="Enabled_Changed" />
+            </Grid>
+        </Border>
+
+        <Border Padding="12" Margin="0,0,0,10" Background="{StaticResource PanelBrush}"
+                BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="150" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="Blitztext Lokal" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" />
+                    <TextBlock Text="Nur lokal. Kein Server." Style="{StaticResource HelpText}" />
+                </StackPanel>
+                <TextBox x:Name="LocalTranscriptionHotkeyBox" Grid.Column="1" Margin="10,0,0,0" IsReadOnly="True"
+                         PreviewKeyDown="Hotkey_PreviewKeyDown" PreviewKeyUp="Hotkey_PreviewKeyUp"
+                         GotKeyboardFocus="Hotkey_GotKeyboardFocus" LostKeyboardFocus="Hotkey_LostKeyboardFocus" />
+                <CheckBox x:Name="LocalTranscriptionEnabledCheckBox" Grid.Column="2" Content="Aktiv" Margin="12,0,0,0"
+                          VerticalAlignment="Center" Checked="Enabled_Changed" Unchecked="Enabled_Changed" />
+            </Grid>
+        </Border>
+
+        <Border Padding="12" Margin="0,0,0,10" Background="{StaticResource PanelBrush}"
+                BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="150" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="Blitztext+" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" />
+                    <TextBlock Text="Geschrieben sprechen." Style="{StaticResource HelpText}" />
+                </StackPanel>
+                <TextBox x:Name="TextImproverHotkeyBox" Grid.Column="1" Margin="10,0,0,0" IsReadOnly="True"
+                         PreviewKeyDown="Hotkey_PreviewKeyDown" PreviewKeyUp="Hotkey_PreviewKeyUp"
+                         GotKeyboardFocus="Hotkey_GotKeyboardFocus" LostKeyboardFocus="Hotkey_LostKeyboardFocus" />
+                <CheckBox x:Name="TextImproverEnabledCheckBox" Grid.Column="2" Content="Aktiv" Margin="12,0,0,0"
+                          VerticalAlignment="Center" Checked="Enabled_Changed" Unchecked="Enabled_Changed" />
+            </Grid>
+        </Border>
+
+        <TextBlock x:Name="StatusLabel" Style="{StaticResource HelpText}" Margin="2,4,0,0" Text="" />
+    </StackPanel>
+</UserControl>

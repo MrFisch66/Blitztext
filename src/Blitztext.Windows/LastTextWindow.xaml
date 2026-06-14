@@ -1,0 +1,45 @@
+<Window x:Class="Blitztext.Windows.LastTextWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Blitztext – Letzter Text"
+        Width="540" Height="440"
+        MinWidth="440" MinHeight="340"
+        ResizeMode="CanResize"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource WindowBackgroundBrush}">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="22,20,22,6">
+            <TextBlock Text="Letzter Text" Style="{StaticResource HeadingText}" />
+            <TextBlock Text="Falls der Cursor gerade woanders war: hier bearbeiten und in die Zwischenablage kopieren – dann an der richtigen Stelle mit Strg+V einfügen."
+                       Style="{StaticResource HelpText}" Margin="0,5,0,0" />
+        </StackPanel>
+
+        <Border Grid.Row="1" Style="{StaticResource Card}" Margin="22,8,22,8" Padding="6">
+            <TextBox x:Name="TextEditor"
+                     AcceptsReturn="True" AcceptsTab="False"
+                     TextWrapping="Wrap"
+                     VerticalContentAlignment="Stretch"
+                     VerticalScrollBarVisibility="Auto"
+                     BorderThickness="0"
+                     Background="Transparent"
+                     Margin="0"
+                     FontSize="14"
+                     TextChanged="TextEditor_TextChanged" />
+        </Border>
+
+        <Grid Grid.Row="2" Margin="22,2,22,18">
+            <TextBlock x:Name="StatusLabel" Style="{StaticResource HelpText}" VerticalAlignment="Center" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Schließen" Click="Close_Click" MinWidth="104" Margin="0,0,10,0" />
+                <Button x:Name="CopyButton" Content="In Zwischenablage kopieren"
+                        Style="{StaticResource PrimaryButton}" Click="Copy_Click" MinWidth="190" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

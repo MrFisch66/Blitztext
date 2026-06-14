@@ -27,8 +27,7 @@
             Cursor="Hand"
             MouseLeftButtonDown="Pill_MouseLeftButtonDown"
             MouseMove="Pill_MouseMove"
-            MouseLeftButtonUp="Pill_MouseLeftButtonUp"
-            ToolTip="Klicken: Tastenkürzel · Ziehen: verschieben · Rechtsklick: Menü">
+            MouseLeftButtonUp="Pill_MouseLeftButtonUp">
         <Border.Effect>
             <DropShadowEffect BlurRadius="18" ShadowDepth="0" Opacity="0.5" Color="#000000" />
         </Border.Effect>

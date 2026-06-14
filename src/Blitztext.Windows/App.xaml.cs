@@ -60,6 +60,7 @@ public partial class App : System.Windows.Application
             AudioLevelProvider = () => _runner?.AudioLevel ?? 0f,
             RecordingProvider = () => _runner?.IsRecording ?? false
         };
+        _overlay.ShowLastTextRequested += (_, _) => _mainWindow.ShowLastDictatedText();
         _overlay.OpenHotkeysRequested += (_, _) => _mainWindow.ShowHotkeyWindow();
         _overlay.OpenSettingsRequested += (_, _) => ShowMainWindow();
         _overlay.QuitRequested += (_, _) => Shutdown();

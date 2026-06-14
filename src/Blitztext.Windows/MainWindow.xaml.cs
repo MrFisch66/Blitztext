@@ -17,6 +17,8 @@ public partial class MainWindow : Window
     private readonly IHotkeyService _hotkeyService;
     private SettingsContainer _settings = new();
     private HotkeyWindow? _hotkeyWindow;
+    private LastTextWindow? _lastTextWindow;
+    private string _lastDictatedText = string.Empty;
     private bool _isLoading;
     private bool _isStartingOrStopping;
     private IntPtr _pasteTarget;
@@ -47,6 +49,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         VersionText.Text = AppInfo.DisplayVersion;
         Title = $"Blitztext {AppInfo.DisplayVersion}";
+        HotkeyEditor.Initialize(() => _settings, ApplyHotkeyChangesAsync, _hotkeyService);
         _runner.PhaseChanged += (_, phase) => Dispatcher.Invoke(() => ApplyPhase(phase));
         _runner.OutputProduced += async (_, text) => await Dispatcher.InvokeAsync(async () => await PasteWorkflowOutputAsync(text));
     }
@@ -74,6 +77,7 @@ public partial class MainWindow : Window
             _hotkeyService.Mode = _settings.App.HotkeyMode;
             ConfigureHotkeys();
             _hotkeyWindow?.RefreshFromSettings();
+            HotkeyEditor.RefreshFromSettings();
             RefreshLocalRuntime();
             RefreshLocalModels();
             await RefreshCredentialStateAsync();
@@ -97,6 +101,13 @@ public partial class MainWindow : Window
         _hotkeyWindow.Show();
         _hotkeyWindow.WindowState = WindowState.Normal;
         _hotkeyWindow.Activate();
+    }
+
+    /// <summary>Shows the last dictated text for review/copy (the pill's single-click fallback).</summary>
+    public void ShowLastDictatedText()
+    {
+        _lastTextWindow ??= new LastTextWindow(text => _pasteService.CopyAsync(text));
+        _lastTextWindow.ShowWith(_lastDictatedText);
     }
 
     private async Task ApplyHotkeyChangesAsync()
@@ -150,10 +161,9 @@ public partial class MainWindow : Window
     protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
     {
         e.Cancel = true;
+        HotkeyEditor.Deactivate();
         Hide();
     }
-
-    private void OpenHotkeysButton_Click(object sender, RoutedEventArgs e) => ShowHotkeyWindow();
 
     private async void SaveApiKeyButton_Click(object sender, RoutedEventArgs e)
     {
@@ -339,6 +349,7 @@ public partial class MainWindow : Window
 
     private async Task PasteWorkflowOutputAsync(string text)
     {
+        _lastDictatedText = text;
         Hide();
         try
         {
@@ -446,7 +457,6 @@ public partial class MainWindow : Window
     {
         var models = _localModelService.GetModelOptions();
         LocalModelCombo.ItemsSource = models;
-        LocalModelCombo.DisplayMemberPath = nameof(LocalModelInfo.DisplayName);
         LocalModelCombo.SelectedValuePath = nameof(LocalModelInfo.Id);
         LocalModelCombo.SelectedValue = _settings.App.SelectedLocalTranscriptionModelName;
 

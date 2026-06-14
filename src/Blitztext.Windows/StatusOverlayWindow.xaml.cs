@@ -44,7 +44,7 @@ public partial class StatusOverlayWindow : Window
     private readonly Random _random = new();
     private readonly DispatcherTimer _animationTimer;
     private readonly DispatcherTimer _revertTimer;
-    private readonly string _idleLabel = $"Blitztext {AppInfo.DisplayVersion}";
+    private readonly string _idleLabel = "Blitztext";
 
     private VisualState _state = VisualState.Idle;
 
@@ -52,6 +52,7 @@ public partial class StatusOverlayWindow : Window
     private bool _mouseDown;
     private bool _dragging;
     private bool _userPositioned;
+    private bool _initialFitDone;
     private double? _pendingLeft;
     private double? _pendingTop;
 
@@ -60,6 +61,9 @@ public partial class StatusOverlayWindow : Window
         InitializeComponent();
         BuildLevelBars();
         StatusLabel.Text = _idleLabel;
+
+        // App name + version live in the hover tooltip (not on the pill itself).
+        PillBorder.ToolTip = $"Blitztext {AppInfo.DisplayVersion}";
 
         _animationTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(60) };
         _animationTimer.Tick += (_, _) => UpdateActiveVisual();
@@ -72,6 +76,19 @@ public partial class StatusOverlayWindow : Window
         };
 
         Loaded += (_, _) => ApplyInitialPosition();
+        ContentRendered += (_, _) =>
+        {
+            if (_initialFitDone)
+            {
+                return;
+            }
+
+            _initialFitDone = true;
+            // The very first SizeToContent pass can be a touch loose before the label is fully
+            // rendered; tighten it once so the idle pill hugs "Blitztext" from the start, not
+            // only after the first workflow.
+            RefitToContent();
+        };
         SizeChanged += (_, _) =>
         {
             // Keep it centered as the label width changes — but only until the user moves it.
@@ -88,8 +105,11 @@ public partial class StatusOverlayWindow : Window
     /// <summary>Reports whether audio is being captured right now (recording vs. processing).</summary>
     public Func<bool>? RecordingProvider { get; set; }
 
-    /// <summary>Left-click / "Tastenkürzel" — opens the slim shortcut editor.</summary>
+    /// <summary>"Tastenkürzel" (context menu / tray) — opens the slim shortcut editor.</summary>
     public event EventHandler? OpenHotkeysRequested;
+
+    /// <summary>Plain left-click on the pill — shows the last dictated text for review/copy.</summary>
+    public event EventHandler? ShowLastTextRequested;
 
     /// <summary>"Einstellungen" — opens the full settings window.</summary>
     public event EventHandler? OpenSettingsRequested;
@@ -199,35 +219,54 @@ public partial class StatusOverlayWindow : Window
 
     private void ApplyVisual(VisualState state, string label)
     {
+        var needsRefit = !string.Equals(StatusLabel.Text, label, StringComparison.Ordinal);
         StatusLabel.Text = label;
 
-        if (state == _state)
+        if (state != _state)
         {
-            return;
-        }
-
-        _state = state;
-        var (background, accent, foreground, showBars) = state switch
-        {
-            VisualState.Recording => (RecordingBackground, RecordingColor, "#DCFCE7", true),
-            VisualState.Processing => (ProcessingBackground, ProcessingColor, "#FDE68A", false),
-            VisualState.Error => (ErrorBackground, ErrorColor, "#FECACA", false),
-            _ => (IdleBackground, IdleDot, "#E5E7EB", false)
-        };
-
-        PillBorder.Background = new SolidColorBrush(background);
-        StatusDot.Fill = new SolidColorBrush(accent);
-        StatusLabel.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString(foreground));
-        LevelBars.Visibility = showBars ? Visibility.Visible : Visibility.Collapsed;
-
-        if (!showBars)
-        {
-            Array.Clear(_barLevels);
-            foreach (var bar in _bars)
+            _state = state;
+            var (background, accent, foreground, showBars) = state switch
             {
-                bar.Height = 3;
+                VisualState.Recording => (RecordingBackground, RecordingColor, "#DCFCE7", true),
+                VisualState.Processing => (ProcessingBackground, ProcessingColor, "#FDE68A", false),
+                VisualState.Error => (ErrorBackground, ErrorColor, "#FECACA", false),
+                _ => (IdleBackground, IdleDot, "#E5E7EB", false)
+            };
+
+            PillBorder.Background = new SolidColorBrush(background);
+            StatusDot.Fill = new SolidColorBrush(accent);
+            StatusLabel.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString(foreground));
+
+            var barsVisibility = showBars ? Visibility.Visible : Visibility.Collapsed;
+            if (LevelBars.Visibility != barsVisibility)
+            {
+                LevelBars.Visibility = barsVisibility;
+                needsRefit = true;
+            }
+
+            if (!showBars)
+            {
+                Array.Clear(_barLevels);
+                foreach (var bar in _bars)
+                {
+                    bar.Height = 3;
+                }
             }
         }
+
+        if (needsRefit)
+        {
+            RefitToContent();
+        }
+    }
+
+    private void RefitToContent()
+    {
+        // An AllowsTransparency + SizeToContent window grows to fit new content but does not
+        // shrink back (a long-standing WPF quirk). Re-applying SizeToContent forces a fresh
+        // measure so the pill always hugs the current label instead of staying at its widest.
+        SizeToContent = SizeToContent.Manual;
+        SizeToContent = SizeToContent.WidthAndHeight;
     }
 
     private void ApplyIdle() => ApplyVisual(VisualState.Idle, _idleLabel);
@@ -336,10 +375,11 @@ public partial class StatusOverlayWindow : Window
         _mouseDown = false;
         _dragging = false;
 
-        // A plain click (no drag) opens the shortcut editor.
+        // A plain click (no drag) shows the last dictated text — a fallback for when the cursor
+        // was in the wrong place. The shortcut editor moved to the right-click menu / tray.
         if (!wasDragging)
         {
-            OpenHotkeysRequested?.Invoke(this, EventArgs.Empty);
+            ShowLastTextRequested?.Invoke(this, EventArgs.Empty);
         }
     }
 

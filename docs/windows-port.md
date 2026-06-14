@@ -20,9 +20,10 @@ The publish output is written to `artifacts/windows/win-x64`.
 - The pill reflects state: neutral when idle, **green while recording**, amber while the text
   is being transcribed/rewritten, and a short red flash on errors. While recording it shows a
   small live microphone level.
-- Left-click the pill opens the slim **shortcut editor** (the most common task). Right-click the
-  pill for a menu: *Tastenkürzel* (shortcut editor), *Einstellungen* (full settings window), and
-  *Beenden*. The tray icon offers the same entries.
+- Left-click the pill shows the **last dictated text** in a small editable window with a
+  *copy to clipboard* button — a fallback for when the cursor was in the wrong place. Right-click
+  the pill for a menu: *Tastenkürzel* (shortcut editor), *Einstellungen* (full settings window),
+  and *Beenden*. The tray icon offers the same entries.
 - Closing any window hides it; the background process keeps running.
 - Global hotkeys are handled by a low-level keyboard hook (`WH_KEYBOARD_LL`) instead of
   `RegisterHotKey`, which makes **modifier-only shortcuts** such as `Ctrl + Win` possible and
@@ -36,10 +37,10 @@ The publish output is written to `artifacts/windows/win-x64`.
   - `Ctrl + Alt + Space`: Blitztext
   - `Ctrl + Alt + Shift + Space`: Blitztext Lokal
   - `Ctrl + Alt + T`: Blitztext+
-  - `Ctrl + Alt + D`: Blitztext `$%&!`
-  - `Ctrl + Alt + E`: Blitztext `:)`
 - API keys are stored in Windows Credential Manager.
 - Settings live under `%LOCALAPPDATA%\Blitztext\settings.json`.
+- The dictated text is typed into the target via `SendInput`. The user's clipboard is snapshotted
+  before the paste and restored afterwards, so dictation never clobbers the clipboard.
 - Temporary recordings are WAV files under `%LOCALAPPDATA%\Blitztext\cache`.
 
 ## Local Transcription
