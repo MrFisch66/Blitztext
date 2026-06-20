@@ -2,9 +2,9 @@
 
   <!-- Single source of truth for the Blitztext (Windows) version. Bump this to release. -->
   <PropertyGroup>
-    <Version>0.1.14</Version>
-    <AssemblyVersion>0.1.14.0</AssemblyVersion>
-    <FileVersion>0.1.14.0</FileVersion>
+    <Version>0.1.15</Version>
+    <AssemblyVersion>0.1.15.0</AssemblyVersion>
+    <FileVersion>0.1.15.0</FileVersion>
     <Product>Blitztext</Product>
     <Company>Blitztext</Company>
   </PropertyGroup>

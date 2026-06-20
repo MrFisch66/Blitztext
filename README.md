@@ -1,5 +1,7 @@
 # Blitztext App
 
+> **Fork notice — Windows port.** This repository is a fork of [Blitztext by cmagnussen](https://github.com/cmagnussen/blitztext-app), adapted and extended with permission (the original is published as part of a tutorial that allows use, adaptation, and redistribution, including commercial use, under the MIT License). It adds a native Windows version and new features, maintained by [MrFisch66](https://github.com/MrFisch66). All credit for the original concept and macOS app goes to cmagnussen. See [NOTICE](NOTICE) and [LICENSE](LICENSE).
+
 Blitztext App is an experimental open-source macOS menubar app for turning speech into text.
 
 It is intentionally small and unfinished. The goal is to make a real workflow visible and hackable: press a hotkey, speak, get text back, optionally rewrite it, and paste it into the app you were using.
@@ -167,6 +169,8 @@ The current direction is documented in [ROADMAP.md](ROADMAP.md). Maintainer-faci
 ## License
 
 Code is released under the MIT License. See [LICENSE](LICENSE).
+
+This is a fork; see [NOTICE](NOTICE) for attribution to the original author (cmagnussen).
 
 Project names, logos, and app icons are not automatically granted as trademarks or brand assets. See [TRADEMARKS.md](TRADEMARKS.md).
 

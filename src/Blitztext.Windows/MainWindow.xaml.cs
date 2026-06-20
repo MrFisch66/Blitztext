@@ -536,4 +536,21 @@ public partial class MainWindow : Window
     {
         return key.Length <= 8 ? "********" : $"{key[..4]} ********";
     }
+
+    private void Hyperlink_RequestNavigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(e.Uri.AbsoluteUri)
+            {
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            Blitztext.Platform.Windows.AppLog.Error("Navigate", ex);
+        }
+
+        e.Handled = true;
+    }
 }

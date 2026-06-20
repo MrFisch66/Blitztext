@@ -87,6 +87,12 @@
                                       Checked="StartupCheckBox_Changed" Unchecked="StartupCheckBox_Changed" />
                         </StackPanel>
                     </Border>
+
+                    <TextBlock Style="{StaticResource HelpText}" Margin="2,4,0,4" TextWrapping="Wrap">
+                        Basiert auf <Hyperlink NavigateUri="https://github.com/cmagnussen/blitztext-app"
+                                               RequestNavigate="Hyperlink_RequestNavigate">Blitztext von cmagnussen</Hyperlink>
+                        · MIT-Lizenz
+                    </TextBlock>
                 </StackPanel>
             </TabItem>
 

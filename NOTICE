@@ -1,0 +1,25 @@
+Blitztext — NOTICE
+==================
+
+This project is a fork of "Blitztext", originally created by cmagnussen
+(https://github.com/cmagnussen/blitztext-app) — a macOS menubar app published as
+part of a tutorial. The original author granted permission to use, adapt, and
+redistribute the project, including for commercial purposes, under the MIT License.
+
+This repository (https://github.com/MrFisch66/Blitztext) adds a native Windows
+port and additional features, maintained by MrFisch66 (M. Jorkisch). It credits
+the original author and retains the upstream MIT License.
+
+Copyright
+---------
+  Original macOS app:       Copyright (c) cmagnussen and the Blitztext contributors
+  Windows port & changes:   Copyright (c) 2026 M. Jorkisch (MrFisch66)
+
+Name and branding
+------------------
+The "Blitztext" name, logo, and visual identity originate from the upstream
+project and are not granted as trademarks by the MIT License (see TRADEMARKS.md).
+This fork retains the original name while crediting the original author. It is a
+non-commercial project and is not distributed through any app store.
+
+See LICENSE for the full license text.
