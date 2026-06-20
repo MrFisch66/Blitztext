@@ -12,6 +12,7 @@ public sealed class WindowsAudioRecorder : IAudioRecorder, IDisposable
     private string? _currentPath;
     private readonly Stopwatch _stopwatch = new();
     private TaskCompletionSource? _recordingStopped;
+    private float _peakAmplitude;
 
     public bool IsRecording { get; private set; }
 
@@ -38,6 +39,7 @@ public sealed class WindowsAudioRecorder : IAudioRecorder, IDisposable
         _waveIn.DataAvailable += HandleDataAvailable;
         _waveIn.RecordingStopped += HandleRecordingStopped;
 
+        _peakAmplitude = 0;
         _stopwatch.Restart();
         _waveIn.StartRecording();
         IsRecording = true;
@@ -57,7 +59,7 @@ public sealed class WindowsAudioRecorder : IAudioRecorder, IDisposable
             await _recordingStopped.Task.WaitAsync(cancellationToken);
         }
 
-        return new RecordedAudio(_currentPath, _stopwatch.Elapsed);
+        return new RecordedAudio(_currentPath, _stopwatch.Elapsed, _peakAmplitude);
     }
 
     public Task DiscardAsync(CancellationToken cancellationToken = default)
@@ -83,6 +85,10 @@ public sealed class WindowsAudioRecorder : IAudioRecorder, IDisposable
         _writer?.Write(e.Buffer, 0, e.BytesRecorded);
         _writer?.Flush();
         AudioLevel = CalculatePeak(e.Buffer, e.BytesRecorded);
+        if (AudioLevel > _peakAmplitude)
+        {
+            _peakAmplitude = AudioLevel;
+        }
     }
 
     private void HandleRecordingStopped(object? sender, StoppedEventArgs e)

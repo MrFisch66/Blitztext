@@ -4,7 +4,19 @@ public static class TranscriptionQualityService
 {
     public static readonly TimeSpan MinimumRecordingDuration = TimeSpan.FromSeconds(0.3);
 
+    // A quick, accidental tap of the hotkey captures near-silence. Transcribers then hallucinate
+    // filler phrases ("Vielen Dank.", "Untertitel …") out of it, which used to be pasted as if the
+    // user had spoken. Treat a short recording whose loudest sample never crosses this floor as
+    // "no speech" and drop it before transcription. The check is limited to short recordings so a
+    // deliberately quiet but real utterance of normal length is still transcribed.
+    public static readonly float SilencePeakThreshold = 0.02f;
+    public static readonly TimeSpan SilenceCheckMaxDuration = TimeSpan.FromSeconds(1.2);
+
     public static bool ShouldRejectRecording(TimeSpan duration) => duration < MinimumRecordingDuration;
+
+    public static bool ShouldRejectRecording(TimeSpan duration, float peakAmplitude) =>
+        ShouldRejectRecording(duration) ||
+        (duration < SilenceCheckMaxDuration && peakAmplitude < SilencePeakThreshold);
 
     public static string CleanedTranscript(string text) => text.Trim();
 

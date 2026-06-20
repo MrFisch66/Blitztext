@@ -22,9 +22,53 @@ public partial class App : System.Windows.Application
     {
         base.OnStartup(e);
 
+        HookGlobalExceptionHandlers();
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
-        WindowsPaths.EnsureDirectories();
 
+        try
+        {
+            WindowsPaths.EnsureDirectories();
+            await StartupAsync();
+        }
+        catch (Exception ex)
+        {
+            AppLog.Error("Startup", ex);
+            System.Windows.MessageBox.Show(
+                $"Blitztext konnte nicht starten.\n\n{ex.Message}\n\nDetails: {WindowsPaths.LogPath}",
+                "Blitztext",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Error);
+            Shutdown();
+        }
+    }
+
+    /// <summary>
+    /// Routes unexpected exceptions to the log instead of letting them tear down the tray app.
+    /// A failed dictation or paste should abort that one action, not kill Blitztext. (Note: native
+    /// corrupted-state exceptions such as access violations bypass these handlers, which is why the
+    /// clipboard snapshot is sanitized rather than relying on catching them.)
+    /// </summary>
+    private void HookGlobalExceptionHandlers()
+    {
+        DispatcherUnhandledException += (_, args) =>
+        {
+            AppLog.Error("Dispatcher", args.Exception);
+            args.Handled = true;
+        };
+
+        AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+            AppLog.Error("AppDomain", args.ExceptionObject as Exception,
+                args.IsTerminating ? "Prozess wird beendet." : null);
+
+        System.Threading.Tasks.TaskScheduler.UnobservedTaskException += (_, args) =>
+        {
+            AppLog.Error("Task", args.Exception);
+            args.SetObserved();
+        };
+    }
+
+    private async Task StartupAsync()
+    {
         var secretStore = new CredentialManagerSecretStore();
         var settingsStore = new JsonSettingsStore(WindowsPaths.SettingsPath);
         var localTranscription = new WhisperCppLocalTranscriptionService(WindowsPaths.AppDataDirectory);
@@ -102,6 +146,8 @@ public partial class App : System.Windows.Application
 
             ShowMainWindow();
         };
+
+        await _mainWindow.MaybeShowFirstRunOnboardingAsync();
     }
 
     protected override void OnExit(ExitEventArgs e)

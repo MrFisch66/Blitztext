@@ -93,6 +93,39 @@ public partial class MainWindow : Window
         _pasteTarget = _pasteService.CaptureCurrentTarget();
     }
 
+    /// <summary>
+    /// On startup, if the local whisper.cpp runtime is missing, open the settings window on the
+    /// "Konto &amp; Zugang" tab and point the user at the install step. Shown on first launch and on
+    /// every later start until the runtime has been installed.
+    /// </summary>
+    public async Task MaybeShowFirstRunOnboardingAsync()
+    {
+        if (_localModelService.GetRuntimeInfo().IsInstalled)
+        {
+            OnboardingHint.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        var firstRun = !_settings.App.HasSeenOnboarding;
+        OnboardingHintText.Text = firstRun
+            ? "Willkommen bei Blitztext! Installiere zunächst die whisper.cpp Runtime – sie wird für die Nutzung von Blitztext benötigt."
+            : "Die whisper.cpp Runtime ist noch nicht installiert – sie wird für die Nutzung von Blitztext benötigt.";
+        OnboardingHint.Visibility = Visibility.Visible;
+
+        MainTabs.SelectedItem = AccountTab;
+
+        PrepareForManualInteraction();
+        Show();
+        WindowState = WindowState.Normal;
+        Activate();
+
+        if (firstRun)
+        {
+            _settings.App.HasSeenOnboarding = true;
+            await _settingsStore.SaveAsync(_settings);
+        }
+    }
+
     /// <summary>Opens the slim, dedicated shortcut editor (also reachable from the pill and tray).</summary>
     public void ShowHotkeyWindow()
     {
@@ -475,6 +508,12 @@ public partial class MainWindow : Window
             ? $"Installiert: {runtime.ExecutablePath}"
             : "Nicht installiert. Für lokale Transkription wird whisper-cli.exe benötigt.";
         InstallRuntimeButton.Content = runtime.IsInstalled ? "whisper.cpp erneut installieren" : "whisper.cpp installieren";
+
+        if (runtime.IsInstalled)
+        {
+            // The first-run hint only applies while the runtime is missing.
+            OnboardingHint.Visibility = Visibility.Collapsed;
+        }
     }
 
     private void ConfigureHotkeys()

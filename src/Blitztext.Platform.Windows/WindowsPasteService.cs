@@ -35,13 +35,11 @@ public sealed class WindowsPasteService : IPasteService
 
     public async Task PasteAsync(string text, IntPtr targetWindow, CancellationToken cancellationToken = default)
     {
-        // Snapshot whatever the user currently has on the clipboard so we can put it back
-        // afterwards — using Blitztext must not clobber the user's clipboard.
-        var clipboardSnapshot = await CaptureClipboardAsync();
-
-        // Briefly place the dictated text on the clipboard so a manual Ctrl+V still works while
-        // we inject; the original content is restored once injection completes.
-        await CopyAsync(text, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrEmpty(text))
+        {
+            return;
+        }
 
         if (targetWindow != IntPtr.Zero)
         {
@@ -49,6 +47,12 @@ public sealed class WindowsPasteService : IPasteService
             await Task.Delay(60, cancellationToken);
         }
 
+        // The dictated text is typed straight into the target via SendInput (Unicode key events),
+        // so we never put it on the clipboard and never read or rewrite the clipboard. That leaves
+        // the user's clipboard completely untouched — the strongest form of "don't clobber it" —
+        // and, critically, avoids the OLE clipboard flush that crashed ole32.dll when rich content
+        // (e.g. from Word) was present.
+        //
         // Inject off the UI thread (that thread owns the low-level keyboard hook, and SendInput
         // from the hook-owning thread can mis-deliver injected keys).
         await Task.Run(
@@ -59,10 +63,6 @@ public sealed class WindowsPasteService : IPasteService
                 SendUnicodeText(text);
             },
             cancellationToken);
-
-        // Let the injected key events drain into the target before we hand the clipboard back.
-        await Task.Delay(80, cancellationToken);
-        await RestoreClipboardAsync(clipboardSnapshot);
     }
 
     private static void SetClipboard(string text)
@@ -74,88 +74,6 @@ public sealed class WindowsPasteService : IPasteService
             try
             {
                 System.Windows.Clipboard.SetDataObject(text, copy: true);
-                return;
-            }
-            catch (Exception) when (attempt < 7)
-            {
-                System.Threading.Thread.Sleep(40);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Copies the current clipboard contents (all readable formats) into a detached snapshot so
-    /// it can be restored after we have temporarily used the clipboard for a paste.
-    /// </summary>
-    private static Task<System.Windows.IDataObject?> CaptureClipboardAsync()
-    {
-        return System.Windows.Application.Current.Dispatcher.InvokeAsync(CaptureClipboard).Task;
-    }
-
-    private static System.Windows.IDataObject? CaptureClipboard()
-    {
-        for (var attempt = 0; attempt < 8; attempt++)
-        {
-            try
-            {
-                var current = System.Windows.Clipboard.GetDataObject();
-                if (current is null)
-                {
-                    return null;
-                }
-
-                var snapshot = new System.Windows.DataObject();
-                var captured = false;
-                foreach (var format in current.GetFormats(autoConvert: false))
-                {
-                    try
-                    {
-                        var data = current.GetData(format, autoConvert: false);
-                        if (data is not null)
-                        {
-                            snapshot.SetData(format, data);
-                            captured = true;
-                        }
-                    }
-                    catch
-                    {
-                        // Some formats (e.g. live COM streams) can't be copied out; skip them.
-                    }
-                }
-
-                return captured ? snapshot : null;
-            }
-            catch (Exception) when (attempt < 7)
-            {
-                System.Threading.Thread.Sleep(40);
-            }
-        }
-
-        return null;
-    }
-
-    private static Task RestoreClipboardAsync(System.Windows.IDataObject? snapshot)
-    {
-        return System.Windows.Application.Current.Dispatcher.InvokeAsync(() => RestoreClipboard(snapshot)).Task;
-    }
-
-    private static void RestoreClipboard(System.Windows.IDataObject? snapshot)
-    {
-        for (var attempt = 0; attempt < 8; attempt++)
-        {
-            try
-            {
-                if (snapshot is null)
-                {
-                    // The clipboard was empty (or unreadable) before we touched it; clear our text
-                    // rather than leaving the dictated text behind.
-                    System.Windows.Clipboard.Clear();
-                }
-                else
-                {
-                    System.Windows.Clipboard.SetDataObject(snapshot, copy: true);
-                }
-
                 return;
             }
             catch (Exception) when (attempt < 7)

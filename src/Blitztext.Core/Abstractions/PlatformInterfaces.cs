@@ -7,7 +7,11 @@ public enum SecretKey
     OpenAIApiKey
 }
 
-public sealed record RecordedAudio(string FilePath, TimeSpan Duration);
+/// <param name="PeakAmplitude">
+/// Loudest sample observed during the recording, normalized to 0..1. Used to distinguish a real
+/// utterance from a near-silent accidental hotkey tap.
+/// </param>
+public sealed record RecordedAudio(string FilePath, TimeSpan Duration, float PeakAmplitude);
 
 public interface IAudioRecorder
 {

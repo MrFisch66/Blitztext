@@ -75,7 +75,7 @@ public sealed class BlitztextWorkflowRunner(
     {
         try
         {
-            if (TranscriptionQualityService.ShouldRejectRecording(audio.Duration))
+            if (TranscriptionQualityService.ShouldRejectRecording(audio.Duration, audio.PeakAmplitude))
             {
                 await recorder.DiscardAsync(cancellationToken);
                 SetPhase(WorkflowPhase.Error("Keine Aufnahme erkannt."));

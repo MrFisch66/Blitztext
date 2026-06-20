@@ -45,7 +45,7 @@
         </Border>
 
         <!-- ============================ Body: sidebar navigation ============================ -->
-        <TabControl Grid.Row="1" Style="{StaticResource NavTabControl}" Margin="14">
+        <TabControl x:Name="MainTabs" Grid.Row="1" Style="{StaticResource NavTabControl}" Margin="14">
 
             <!-- Allgemein -->
             <TabItem Style="{StaticResource NavTabItem}">
@@ -111,7 +111,7 @@
             </TabItem>
 
             <!-- Konto und Zugang -->
-            <TabItem Style="{StaticResource NavTabItem}">
+            <TabItem x:Name="AccountTab" Style="{StaticResource NavTabItem}">
                 <TabItem.Header>
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Style="{StaticResource NavGlyph}" Text="&#xE77B;" />
@@ -119,6 +119,28 @@
                     </StackPanel>
                 </TabItem.Header>
                 <StackPanel>
+                    <!-- whisper.cpp Runtime — primary first-run step, surfaced during onboarding. -->
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="whisper.cpp Runtime" Style="{StaticResource SectionTitle}" />
+
+                            <Border x:Name="OnboardingHint" Visibility="Collapsed"
+                                    Background="#EEF0FE" BorderBrush="#C7D2FE" BorderThickness="1"
+                                    CornerRadius="8" Padding="12,10" Margin="0,0,0,12">
+                                <TextBlock x:Name="OnboardingHintText" Style="{StaticResource HelpText}"
+                                           Foreground="#3730A3" FontWeight="Medium" />
+                            </Border>
+
+                            <TextBlock Text="whisper.cpp wird für die Nutzung von Blitztext benötigt und muss einmalig installiert werden."
+                                       Style="{StaticResource HelpText}" Margin="0,0,0,8" />
+                            <TextBlock x:Name="LocalRuntimeStatusText" Style="{StaticResource HelpText}" Margin="0,0,0,8" />
+                            <Button x:Name="InstallRuntimeButton" Content="whisper.cpp installieren"
+                                    Click="InstallRuntimeButton_Click" HorizontalAlignment="Left" />
+                            <ProgressBar x:Name="RuntimeProgressBar" Height="8" Minimum="0" Maximum="1"
+                                         Visibility="Collapsed" Margin="0,8,0,0" />
+                        </StackPanel>
+                    </Border>
+
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
                             <TextBlock Text="OpenAI API-Key" Style="{StaticResource SectionTitle}" />
@@ -184,17 +206,6 @@
                     </StackPanel>
                 </TabItem.Header>
                 <StackPanel>
-                    <Border Style="{StaticResource Card}">
-                        <StackPanel>
-                            <TextBlock Text="whisper.cpp Runtime" Style="{StaticResource SectionTitle}" />
-                            <TextBlock x:Name="LocalRuntimeStatusText" Style="{StaticResource HelpText}" Margin="0,0,0,8" />
-                            <Button x:Name="InstallRuntimeButton" Content="whisper.cpp installieren"
-                                    Click="InstallRuntimeButton_Click" HorizontalAlignment="Left" />
-                            <ProgressBar x:Name="RuntimeProgressBar" Height="8" Minimum="0" Maximum="1"
-                                         Visibility="Collapsed" Margin="0,8,0,0" />
-                        </StackPanel>
-                    </Border>
-
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
                             <TextBlock Text="Modell" Style="{StaticResource SectionTitle}" />

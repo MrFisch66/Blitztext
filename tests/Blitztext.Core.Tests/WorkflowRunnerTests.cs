@@ -57,6 +57,29 @@ public sealed class WorkflowRunnerTests
         Assert.Empty(rewrite.Requests);
     }
 
+    [Fact]
+    public async Task SilentTap_ProducesNoOutputAndDoesNotTranscribe()
+    {
+        using var recording = TempRecording();
+        // Short and near-silent: the signature of an accidental hotkey tap.
+        var recorder = new FakeRecorder(recording.Path, TimeSpan.FromMilliseconds(500), peakAmplitude: 0.004f);
+        var remote = new FakeTranscriptionBackend("halluzinierter text");
+        var local = new FakeTranscriptionBackend("local text");
+        var rewrite = new FakeRewriteClient("unused");
+        var runner = new BlitztextWorkflowRunner(recorder, remote, local, rewrite);
+
+        string? output = null;
+        runner.OutputProduced += (_, text) => output = text;
+
+        await runner.StartAsync(WorkflowType.Transcription, new SettingsContainer());
+        await runner.StopAsync();
+
+        Assert.Null(output);
+        Assert.Empty(remote.Requests);
+        Assert.Empty(local.Requests);
+        Assert.Equal(WorkflowPhaseKind.Error, runner.Phase.Kind);
+    }
+
     private static TempFile TempRecording()
     {
         var path = Path.Combine(Path.GetTempPath(), $"blitztext-test-{Guid.NewGuid():N}.wav");
@@ -77,7 +100,7 @@ public sealed class WorkflowRunnerTests
         }
     }
 
-    private sealed class FakeRecorder(string path, TimeSpan duration) : IAudioRecorder
+    private sealed class FakeRecorder(string path, TimeSpan duration, float peakAmplitude = 0.5f) : IAudioRecorder
     {
         public bool IsRecording { get; private set; }
         public float AudioLevel => IsRecording ? 0.5f : 0;
@@ -91,7 +114,7 @@ public sealed class WorkflowRunnerTests
         public Task<RecordedAudio> StopAsync(CancellationToken cancellationToken = default)
         {
             IsRecording = false;
-            return Task.FromResult(new RecordedAudio(path, duration));
+            return Task.FromResult(new RecordedAudio(path, duration, peakAmplitude));
         }
 
         public Task DiscardAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;

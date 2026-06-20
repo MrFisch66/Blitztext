@@ -93,6 +93,8 @@ For a slower, more explicit walkthrough, see [docs/setup.md](docs/setup.md).
 The Windows port is a native .NET 8 WPF tray app. It uses Windows global hotkeys, Windows Credential Manager, WAV microphone recording, `SendInput` paste, OpenAI transcription/rewrites, and a `whisper.cpp`-based local transcription adapter.
 
 ```powershell
+git clone https://github.com/MrFisch66/Blitztext.git
+cd Blitztext
 dotnet build .\Blitztext.sln -c Release
 dotnet test .\Blitztext.sln -c Release
 .\build-windows.ps1 -Configuration Release

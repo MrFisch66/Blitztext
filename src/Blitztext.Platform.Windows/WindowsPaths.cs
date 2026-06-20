@@ -13,10 +13,15 @@ public static class WindowsPaths
 
     public static string ToolsDirectory => Path.Combine(AppDataDirectory, "tools");
 
+    public static string LogsDirectory => Path.Combine(AppDataDirectory, "logs");
+
+    public static string LogPath => Path.Combine(LogsDirectory, "blitztext.log");
+
     public static void EnsureDirectories()
     {
         Directory.CreateDirectory(AppDataDirectory);
         Directory.CreateDirectory(CacheDirectory);
         Directory.CreateDirectory(ToolsDirectory);
+        Directory.CreateDirectory(LogsDirectory);
     }
 }
