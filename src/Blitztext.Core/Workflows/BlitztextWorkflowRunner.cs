@@ -83,10 +83,11 @@ public sealed class BlitztextWorkflowRunner(
             }
 
             SetPhase(WorkflowPhase.Running(IsLocal(type) ? "Wird lokal transkribiert ..." : "Wird transkribiert ..."));
-            var rawText = await TranscribeAsync(type, audio, cancellationToken);
+            var customTerms = CustomTermsFor(audio);
+            var rawText = await TranscribeAsync(type, audio, customTerms, cancellationToken);
             var cleanedRawText = TranscriptionQualityService.CleanedTranscript(rawText);
 
-            if (TranscriptionQualityService.IsLikelyArtifact(cleanedRawText, audio.Duration))
+            if (TranscriptionQualityService.IsLikelyArtifact(cleanedRawText, audio.Duration, customTerms))
             {
                 SetPhase(WorkflowPhase.Error("Keine Aufnahme erkannt."));
                 return;
@@ -119,12 +120,13 @@ public sealed class BlitztextWorkflowRunner(
         }
     }
 
-    private async Task<string> TranscribeAsync(WorkflowType type, RecordedAudio audio, CancellationToken cancellationToken)
-    {
-        var customTerms = audio.Duration.TotalSeconds >= 0.9
-            ? _settings.TextImprovement.CustomTerms
-            : [];
+    // For very short clips the biasing prompt does more harm than good: the model is more likely
+    // to echo the term list than to transcribe the brief utterance.
+    private IReadOnlyList<string> CustomTermsFor(RecordedAudio audio) =>
+        audio.Duration.TotalSeconds >= 0.9 ? _settings.TextImprovement.CustomTerms : [];
 
+    private async Task<string> TranscribeAsync(WorkflowType type, RecordedAudio audio, IReadOnlyList<string> customTerms, CancellationToken cancellationToken)
+    {
         var request = new TranscriptionRequest(
             audio.FilePath,
             customTerms,

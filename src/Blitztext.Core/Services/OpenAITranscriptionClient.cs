@@ -28,7 +28,7 @@ public sealed class OpenAITranscriptionClient(HttpClient httpClient, Func<Cancel
 
         if (request.CustomTerms.Count > 0)
         {
-            form.Add(new StringContent($"Eigennamen und Begriffe: {string.Join(", ", request.CustomTerms)}"), "prompt");
+            form.Add(new StringContent(TranscriptionQualityService.BuildCustomTermsPrompt(request.CustomTerms)), "prompt");
         }
 
         if (!string.IsNullOrWhiteSpace(request.Language))

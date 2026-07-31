@@ -181,15 +181,23 @@
                 <StackPanel>
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
+                            <TextBlock Text="Eigennamen &amp; Fachbegriffe" Style="{StaticResource SectionTitle}" />
+                            <TextBlock Text="Diese Begriffe werden bei der Spracherkennung (auch lokal) und bei Blitztext+ bevorzugt in genau dieser Schreibweise verwendet."
+                                       Style="{StaticResource HelpText}" Margin="0,0,0,8" />
+
+                            <TextBlock Text="Begriffe, kommagetrennt (z. B. GrumBuddy, Blitztext)" Style="{StaticResource FieldLabel}" />
+                            <TextBox x:Name="CustomTermsTextBox" TextChanged="SettingsTextBox_Changed" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
                             <TextBlock Text="Schreiben (Blitztext+)" Style="{StaticResource SectionTitle}" />
                             <TextBlock Text="Diese Optionen steuern, wie der diktierte Text mit Blitztext+ aufbereitet wird."
                                        Style="{StaticResource HelpText}" Margin="0,0,0,8" />
 
                             <TextBlock Text="Schreibstil" Style="{StaticResource FieldLabel}" />
                             <ComboBox x:Name="ToneCombo" SelectionChanged="SettingsControl_Changed" />
-
-                            <TextBlock Text="Eigennamen, kommagetrennt" Style="{StaticResource FieldLabel}" />
-                            <TextBox x:Name="CustomTermsTextBox" TextChanged="SettingsTextBox_Changed" />
 
                             <TextBlock Text="Kontext" Style="{StaticResource FieldLabel}" />
                             <TextBox x:Name="ContextTextBox" TextChanged="SettingsTextBox_Changed" />

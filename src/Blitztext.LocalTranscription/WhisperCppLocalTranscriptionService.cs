@@ -3,6 +3,7 @@ using System.IO.Compression;
 using System.Text.Json;
 using Blitztext.Core.Abstractions;
 using Blitztext.Core.Models;
+using Blitztext.Core.Services;
 
 namespace Blitztext.LocalTranscription;
 
@@ -186,6 +187,12 @@ public sealed class WhisperCppLocalTranscriptionService : ITranscriptionBackend,
             process.StartInfo.ArgumentList.Add("-otxt");
             process.StartInfo.ArgumentList.Add("-of");
             process.StartInfo.ArgumentList.Add(outputStem);
+
+            if (request.CustomTerms.Count > 0)
+            {
+                process.StartInfo.ArgumentList.Add("--prompt");
+                process.StartInfo.ArgumentList.Add(TranscriptionQualityService.BuildCustomTermsPrompt(request.CustomTerms));
+            }
 
             process.Start();
             var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);

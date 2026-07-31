@@ -80,6 +80,52 @@ public sealed class WorkflowRunnerTests
         Assert.Equal(WorkflowPhaseKind.Error, runner.Phase.Kind);
     }
 
+    [Fact]
+    public async Task LongSilentRecording_ProducesNoOutputAndDoesNotTranscribe()
+    {
+        using var recording = TempRecording();
+        // Holding the hotkey for seconds without speaking: long, but effectively silent.
+        var recorder = new FakeRecorder(recording.Path, TimeSpan.FromSeconds(3), peakAmplitude: 0.004f);
+        var remote = new FakeTranscriptionBackend("Eigennamen und Begriffe: Codex, Claude Code");
+        var local = new FakeTranscriptionBackend("local text");
+        var rewrite = new FakeRewriteClient("unused");
+        var runner = new BlitztextWorkflowRunner(recorder, remote, local, rewrite);
+
+        string? output = null;
+        runner.OutputProduced += (_, text) => output = text;
+
+        await runner.StartAsync(WorkflowType.Transcription, new SettingsContainer());
+        await runner.StopAsync();
+
+        Assert.Null(output);
+        Assert.Empty(remote.Requests);
+        Assert.Equal(WorkflowPhaseKind.Error, runner.Phase.Kind);
+    }
+
+    [Fact]
+    public async Task EchoedPromptTranscript_ProducesNoOutput()
+    {
+        using var recording = TempRecording();
+        // Audible noise passes the silence check, but the transcriber echoes the biasing prompt.
+        var recorder = new FakeRecorder(recording.Path, TimeSpan.FromSeconds(3), peakAmplitude: 0.2f);
+        var remote = new FakeTranscriptionBackend("Eigennamen und Begriffe: Codex, Claude Code");
+        var local = new FakeTranscriptionBackend("local text");
+        var rewrite = new FakeRewriteClient("unused");
+        var runner = new BlitztextWorkflowRunner(recorder, remote, local, rewrite);
+        var settings = new SettingsContainer();
+        settings.TextImprovement.CustomTerms.AddRange(["Codex", "Claude Code"]);
+
+        string? output = null;
+        runner.OutputProduced += (_, text) => output = text;
+
+        await runner.StartAsync(WorkflowType.Transcription, settings);
+        await runner.StopAsync();
+
+        Assert.Null(output);
+        Assert.Single(remote.Requests);
+        Assert.Equal(WorkflowPhaseKind.Error, runner.Phase.Kind);
+    }
+
     private static TempFile TempRecording()
     {
         var path = Path.Combine(Path.GetTempPath(), $"blitztext-test-{Guid.NewGuid():N}.wav");
