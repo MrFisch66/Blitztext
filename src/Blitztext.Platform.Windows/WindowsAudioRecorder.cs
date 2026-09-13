@@ -117,7 +117,7 @@ public sealed class WindowsAudioRecorder : IAudioRecorder, IDisposable
         var peak = 0;
         for (var index = 0; index + 1 < bytesRecorded; index += 2)
         {
-            var sample = Math.Abs(BitConverter.ToInt16(buffer, index));
+            var sample = Math.Abs((int)BitConverter.ToInt16(buffer, index));
             if (sample > peak)
             {
                 peak = sample;
