@@ -1,4 +1,4 @@
-using Blitztext.Core.Models;
+﻿using Blitztext.Core.Models;
 
 namespace Blitztext.Core.Abstractions;
 
@@ -17,6 +17,13 @@ public interface IAudioRecorder
 {
     bool IsRecording { get; }
     float AudioLevel { get; }
+
+    /// <summary>
+    /// Raw captured audio (16 kHz, mono, PCM16 little-endian) as it arrives, for live transcription.
+    /// The memory is only valid during the callback; consumers must copy what they keep.
+    /// </summary>
+    event EventHandler<ReadOnlyMemory<byte>>? AudioAvailable;
+
     Task StartAsync(CancellationToken cancellationToken = default);
     Task<RecordedAudio> StopAsync(CancellationToken cancellationToken = default);
     Task DiscardAsync(CancellationToken cancellationToken = default);
@@ -47,6 +54,27 @@ public interface ITranscriptionBackend
     Task<string> TranscribeAsync(TranscriptionRequest request, CancellationToken cancellationToken = default);
 }
 
+public sealed record StreamingTranscriptionOptions(IReadOnlyList<string> CustomTerms, string Language);
+
+/// <summary>
+/// A transcription that runs while the user is still speaking, so only the tail of the audio is
+/// left to process when the recording stops.
+/// </summary>
+public interface IStreamingTranscriptionSession : IAsyncDisposable
+{
+    /// <summary>Feeds captured audio (16 kHz, mono, PCM16). Never blocks the capture thread.</summary>
+    void AppendAudio(ReadOnlySpan<byte> pcm16);
+
+    /// <summary>Marks the end of the recording and returns the final transcript.</summary>
+    Task<string> CompleteAsync(CancellationToken cancellationToken = default);
+}
+
+public interface IStreamingTranscriptionBackend
+{
+    /// <summary>Starts a session immediately; it connects in the background and buffers audio until ready.</summary>
+    IStreamingTranscriptionSession StartSession(StreamingTranscriptionOptions options);
+}
+
 public enum RewriteOperation
 {
     Improve
@@ -72,6 +100,9 @@ public interface ILocalModelService
 {
     IReadOnlyList<LocalModelInfo> GetModelOptions();
     bool IsModelInstalled(string modelName);
+
+    /// <summary>Whether the model runs through the whisper.cpp runtime (and therefore needs it installed).</summary>
+    bool RequiresRuntime(string modelName);
     LocalRuntimeInfo GetRuntimeInfo();
     Task<LocalRuntimeInfo> InstallRuntimeAsync(
         IProgress<double>? progress = null,

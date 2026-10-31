@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO;
 using Blitztext.Core.Abstractions;
 using NAudio.Wave;
@@ -17,6 +17,8 @@ public sealed class WindowsAudioRecorder : IAudioRecorder, IDisposable
     public bool IsRecording { get; private set; }
 
     public float AudioLevel { get; private set; }
+
+    public event EventHandler<ReadOnlyMemory<byte>>? AudioAvailable;
 
     public Task StartAsync(CancellationToken cancellationToken = default)
     {
@@ -84,6 +86,16 @@ public sealed class WindowsAudioRecorder : IAudioRecorder, IDisposable
     {
         _writer?.Write(e.Buffer, 0, e.BytesRecorded);
         _writer?.Flush();
+        try
+        {
+            AudioAvailable?.Invoke(this, e.Buffer.AsMemory(0, e.BytesRecorded));
+        }
+        catch (Exception ex)
+        {
+            // A live-transcription consumer must never take down the capture thread; the WAV file
+            // keeps recording and serves as the fallback.
+            AppLog.Error("AudioAvailable", ex);
+        }
         AudioLevel = CalculatePeak(e.Buffer, e.BytesRecorded);
         if (AudioLevel > _peakAmplitude)
         {

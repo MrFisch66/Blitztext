@@ -1,4 +1,4 @@
-using Blitztext.Core.Abstractions;
+﻿using Blitztext.Core.Abstractions;
 using Blitztext.Core.Models;
 using Blitztext.Core.Workflows;
 
@@ -126,6 +126,84 @@ public sealed class WorkflowRunnerTests
         Assert.Equal(WorkflowPhaseKind.Error, runner.Phase.Kind);
     }
 
+    [Fact]
+    public async Task LiveTranscription_IsUsedInsteadOfUpload()
+    {
+        using var recording = TempRecording();
+        var recorder = new FakeRecorder(recording.Path, TimeSpan.FromSeconds(2));
+        var remote = new FakeTranscriptionBackend("upload text");
+        var live = new FakeStreamingBackend("live text");
+        var runner = new BlitztextWorkflowRunner(recorder, remote, new FakeTranscriptionBackend("local"), new FakeRewriteClient("unused"), live);
+        var settings = new SettingsContainer();
+        settings.TextImprovement.CustomTerms.Add("Blitztext");
+
+        string? output = null;
+        runner.OutputProduced += (_, text) => output = text;
+
+        await runner.StartAsync(WorkflowType.Transcription, settings);
+        recorder.Emit([1, 0, 2, 0]);
+        await runner.StopAsync();
+
+        Assert.Equal("live text", output);
+        Assert.Empty(remote.Requests);
+        Assert.Equal(4, live.Session!.ReceivedBytes);
+        Assert.Equal("Blitztext", live.Options!.CustomTerms.Single());
+        Assert.True(live.Session.Disposed);
+    }
+
+    [Fact]
+    public async Task LiveTranscriptionFailure_FallsBackToUpload()
+    {
+        using var recording = TempRecording();
+        var recorder = new FakeRecorder(recording.Path, TimeSpan.FromSeconds(2));
+        var remote = new FakeTranscriptionBackend("upload text");
+        var live = new FakeStreamingBackend(failure: new InvalidOperationException("socket"));
+        var runner = new BlitztextWorkflowRunner(recorder, remote, new FakeTranscriptionBackend("local"), new FakeRewriteClient("unused"), live);
+
+        string? output = null;
+        Exception? reported = null;
+        runner.OutputProduced += (_, text) => output = text;
+        runner.LiveTranscriptionFailed += (_, ex) => reported = ex;
+
+        await runner.StartAsync(WorkflowType.Transcription, new SettingsContainer());
+        await runner.StopAsync();
+
+        Assert.Equal("upload text", output);
+        Assert.Single(remote.Requests);
+        Assert.Equal("socket", reported?.Message);
+    }
+
+    [Fact]
+    public async Task LiveTranscription_IsNotUsedForLocalOrWhenDisabled()
+    {
+        using var recording = TempRecording();
+        var recorder = new FakeRecorder(recording.Path, TimeSpan.FromSeconds(2));
+        var live = new FakeStreamingBackend("live text");
+        var runner = new BlitztextWorkflowRunner(recorder, new FakeTranscriptionBackend("upload"), new FakeTranscriptionBackend("local"), new FakeRewriteClient("unused"), live);
+
+        await runner.StartAsync(WorkflowType.LocalTranscription, new SettingsContainer());
+        await runner.StopAsync();
+        await runner.StartAsync(WorkflowType.Transcription, new SettingsContainer { App = { LiveTranscriptionEnabled = false } });
+        await runner.StopAsync();
+
+        Assert.Equal(0, live.SessionsStarted);
+    }
+
+    [Fact]
+    public async Task SilentRecording_DisposesLiveSessionWithoutCompleting()
+    {
+        using var recording = TempRecording();
+        var recorder = new FakeRecorder(recording.Path, TimeSpan.FromMilliseconds(500), peakAmplitude: 0.004f);
+        var live = new FakeStreamingBackend("halluziniert");
+        var runner = new BlitztextWorkflowRunner(recorder, new FakeTranscriptionBackend("upload"), new FakeTranscriptionBackend("local"), new FakeRewriteClient("unused"), live);
+
+        await runner.StartAsync(WorkflowType.Transcription, new SettingsContainer());
+        await runner.StopAsync();
+
+        Assert.False(live.Session!.Completed);
+        Assert.True(live.Session.Disposed);
+    }
+
     private static TempFile TempRecording()
     {
         var path = Path.Combine(Path.GetTempPath(), $"blitztext-test-{Guid.NewGuid():N}.wav");
@@ -151,6 +229,10 @@ public sealed class WorkflowRunnerTests
         public bool IsRecording { get; private set; }
         public float AudioLevel => IsRecording ? 0.5f : 0;
 
+        public event EventHandler<ReadOnlyMemory<byte>>? AudioAvailable;
+
+        public void Emit(byte[] pcm16) => AudioAvailable?.Invoke(this, pcm16);
+
         public Task StartAsync(CancellationToken cancellationToken = default)
         {
             IsRecording = true;
@@ -174,6 +256,42 @@ public sealed class WorkflowRunnerTests
         {
             Requests.Add(request);
             return Task.FromResult(text);
+        }
+    }
+
+    private sealed class FakeStreamingBackend(string text = "", Exception? failure = null) : IStreamingTranscriptionBackend
+    {
+        public int SessionsStarted { get; private set; }
+        public StreamingTranscriptionOptions? Options { get; private set; }
+        public FakeStreamingSession? Session { get; private set; }
+
+        public IStreamingTranscriptionSession StartSession(StreamingTranscriptionOptions options)
+        {
+            SessionsStarted++;
+            Options = options;
+            Session = new FakeStreamingSession(text, failure);
+            return Session;
+        }
+    }
+
+    private sealed class FakeStreamingSession(string text, Exception? failure) : IStreamingTranscriptionSession
+    {
+        public int ReceivedBytes { get; private set; }
+        public bool Completed { get; private set; }
+        public bool Disposed { get; private set; }
+
+        public void AppendAudio(ReadOnlySpan<byte> pcm16) => ReceivedBytes += pcm16.Length;
+
+        public Task<string> CompleteAsync(CancellationToken cancellationToken = default)
+        {
+            Completed = true;
+            return failure is null ? Task.FromResult(text) : Task.FromException<string>(failure);
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            Disposed = true;
+            return ValueTask.CompletedTask;
         }
     }
 

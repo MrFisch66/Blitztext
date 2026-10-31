@@ -1,4 +1,4 @@
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Blitztext.Core.Abstractions;
@@ -7,7 +7,9 @@ namespace Blitztext.Core.Services;
 
 public sealed class OpenAITranscriptionClient(HttpClient httpClient, Func<CancellationToken, Task<string?>> apiKeyProvider) : ITranscriptionBackend
 {
-    public const string DefaultModel = "gpt-4o-mini-transcribe";
+    // gpt-transcribe (July 2026) replaces gpt-4o-mini-transcribe: same speed, clearly lower error
+    // rate, and literal biasing terms via `keywords` instead of a free-text prompt.
+    public const string DefaultModel = "gpt-transcribe";
     private static readonly Uri TranscriptionsUri = new("https://api.openai.com/v1/audio/transcriptions");
 
     public async Task<string> TranscribeAsync(TranscriptionRequest request, CancellationToken cancellationToken = default)
@@ -24,16 +26,15 @@ public sealed class OpenAITranscriptionClient(HttpClient httpClient, Func<Cancel
         audioContent.Headers.ContentType = new MediaTypeHeaderValue(ContentTypeFor(request.AudioPath));
         form.Add(audioContent, "file", Path.GetFileName(request.AudioPath));
         form.Add(new StringContent(DefaultModel), "model");
-        form.Add(new StringContent("text"), "response_format");
 
-        if (request.CustomTerms.Count > 0)
+        foreach (var keyword in OpenAITranscriptionOptions.Keywords(request.CustomTerms))
         {
-            form.Add(new StringContent(TranscriptionQualityService.BuildCustomTermsPrompt(request.CustomTerms)), "prompt");
+            form.Add(new StringContent(keyword), "keywords[]");
         }
 
-        if (!string.IsNullOrWhiteSpace(request.Language))
+        foreach (var language in OpenAITranscriptionOptions.Languages(request.Language))
         {
-            form.Add(new StringContent(request.Language.Trim()), "language");
+            form.Add(new StringContent(language), "languages[]");
         }
 
         using var message = new HttpRequestMessage(HttpMethod.Post, TranscriptionsUri);
@@ -48,7 +49,7 @@ public sealed class OpenAITranscriptionClient(HttpClient httpClient, Func<Cancel
             throw new InvalidOperationException($"OpenAI-Fehler: {ParseOpenAIError(content) ?? $"Status {(int)response.StatusCode}"}");
         }
 
-        var text = content.Trim();
+        var text = ParseTranscript(content)?.Trim();
         if (string.IsNullOrWhiteSpace(text))
         {
             throw new InvalidOperationException("Transkription fehlgeschlagen.");
@@ -71,6 +72,18 @@ public sealed class OpenAITranscriptionClient(HttpClient httpClient, Func<Cancel
         };
     }
 
+    private static string? ParseTranscript(string json)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<TranscriptionResponse>(json)?.Text;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
     private static string? ParseOpenAIError(string json)
     {
         try
@@ -82,6 +95,8 @@ public sealed class OpenAITranscriptionClient(HttpClient httpClient, Func<Cancel
             return null;
         }
     }
+
+    private sealed record TranscriptionResponse([property: JsonPropertyName("text")] string? Text);
 
     private sealed record OpenAIErrorResponse([property: JsonPropertyName("error")] ApiError? Error);
 

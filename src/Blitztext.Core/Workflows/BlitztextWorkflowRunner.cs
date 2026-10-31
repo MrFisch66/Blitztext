@@ -1,4 +1,4 @@
-using Blitztext.Core.Abstractions;
+﻿using Blitztext.Core.Abstractions;
 using Blitztext.Core.Models;
 using Blitztext.Core.Services;
 
@@ -8,11 +8,18 @@ public sealed class BlitztextWorkflowRunner(
     IAudioRecorder recorder,
     ITranscriptionBackend remoteTranscription,
     ITranscriptionBackend localTranscription,
-    ITextRewriteClient rewriteClient)
+    ITextRewriteClient rewriteClient,
+    IStreamingTranscriptionBackend? streamingTranscription = null)
 {
+    // Once the key is released only the audio tail is left for the live model. If no final
+    // transcript arrives within this window, the recorded file is uploaded instead.
+    private static readonly TimeSpan LiveCompletionTimeout = TimeSpan.FromSeconds(5);
+
     private SettingsContainer _settings = new();
     private WorkflowType? _activeType;
     private CancellationTokenSource? _processingCts;
+    private IStreamingTranscriptionSession? _liveSession;
+    private IReadOnlyList<string> _liveCustomTerms = [];
 
     public WorkflowPhase Phase { get; private set; } = WorkflowPhase.Idle;
     public WorkflowType? ActiveType => _activeType;
@@ -22,6 +29,9 @@ public sealed class BlitztextWorkflowRunner(
     public event EventHandler<WorkflowPhase>? PhaseChanged;
     public event EventHandler<string>? OutputProduced;
 
+    /// <summary>Raised when live transcription failed and the recording was uploaded as a file instead.</summary>
+    public event EventHandler<Exception>? LiveTranscriptionFailed;
+
     public async Task StartAsync(WorkflowType type, SettingsContainer settings, CancellationToken cancellationToken = default)
     {
         await ResetAsync(cancellationToken);
@@ -30,7 +40,16 @@ public sealed class BlitztextWorkflowRunner(
         _processingCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
         SetPhase(WorkflowPhase.Running("Aufnahme läuft ..."));
-        await recorder.StartAsync(cancellationToken);
+        StartLiveSession(type);
+        try
+        {
+            await recorder.StartAsync(cancellationToken);
+        }
+        catch
+        {
+            await EndLiveSessionAsync(DetachLiveSession());
+            throw;
+        }
     }
 
     public async Task StopAsync(CancellationToken cancellationToken = default)
@@ -43,17 +62,32 @@ public sealed class BlitztextWorkflowRunner(
         if (!recorder.IsRecording)
         {
             _processingCts?.Cancel();
+            await EndLiveSessionAsync(DetachLiveSession());
             SetPhase(WorkflowPhase.Idle);
             return;
         }
 
-        var audio = await recorder.StopAsync(cancellationToken);
-        await ProcessAsync(_activeType.Value, audio, _processingCts?.Token ?? cancellationToken);
+        RecordedAudio audio;
+        try
+        {
+            audio = await recorder.StopAsync(cancellationToken);
+        }
+        catch
+        {
+            await EndLiveSessionAsync(DetachLiveSession());
+            throw;
+        }
+
+        // Detach only after the recorder stopped: stopping flushes the last buffers through
+        // AudioAvailable, and those carry the final words of the utterance.
+        var liveSession = DetachLiveSession();
+        await ProcessAsync(_activeType.Value, audio, liveSession, _processingCts?.Token ?? cancellationToken);
     }
 
     public async Task ResetAsync(CancellationToken cancellationToken = default)
     {
         _processingCts?.Cancel();
+        await EndLiveSessionAsync(DetachLiveSession());
         if (recorder.IsRecording)
         {
             try
@@ -71,7 +105,11 @@ public sealed class BlitztextWorkflowRunner(
         SetPhase(WorkflowPhase.Idle);
     }
 
-    private async Task ProcessAsync(WorkflowType type, RecordedAudio audio, CancellationToken cancellationToken)
+    private async Task ProcessAsync(
+        WorkflowType type,
+        RecordedAudio audio,
+        IStreamingTranscriptionSession? liveSession,
+        CancellationToken cancellationToken)
     {
         try
         {
@@ -83,8 +121,7 @@ public sealed class BlitztextWorkflowRunner(
             }
 
             SetPhase(WorkflowPhase.Running(IsLocal(type) ? "Wird lokal transkribiert ..." : "Wird transkribiert ..."));
-            var customTerms = CustomTermsFor(audio);
-            var rawText = await TranscribeAsync(type, audio, customTerms, cancellationToken);
+            var (rawText, customTerms) = await TranscribeAsync(type, audio, liveSession, cancellationToken);
             var cleanedRawText = TranscriptionQualityService.CleanedTranscript(rawText);
 
             if (TranscriptionQualityService.IsLikelyArtifact(cleanedRawText, audio.Duration, customTerms))
@@ -116,7 +153,51 @@ public sealed class BlitztextWorkflowRunner(
         }
         finally
         {
+            await EndLiveSessionAsync(liveSession);
             TryDelete(audio.FilePath);
+        }
+    }
+
+    private void StartLiveSession(WorkflowType type)
+    {
+        if (streamingTranscription is null || !_settings.App.LiveTranscriptionEnabled || IsLocal(type))
+        {
+            return;
+        }
+
+        // The recording length is unknown up front, so the full term list is sent. Keywords are
+        // literal hints (not a prompt), which makes the short-clip echo problem far less likely.
+        _liveCustomTerms = _settings.TextImprovement.CustomTerms.ToArray();
+        _liveSession = streamingTranscription.StartSession(
+            new StreamingTranscriptionOptions(_liveCustomTerms, _settings.Transcription.Language));
+        recorder.AudioAvailable += ForwardAudioToLiveSession;
+    }
+
+    private IStreamingTranscriptionSession? DetachLiveSession()
+    {
+        recorder.AudioAvailable -= ForwardAudioToLiveSession;
+        var session = _liveSession;
+        _liveSession = null;
+        return session;
+    }
+
+    private void ForwardAudioToLiveSession(object? sender, ReadOnlyMemory<byte> pcm16) =>
+        _liveSession?.AppendAudio(pcm16.Span);
+
+    private static async Task EndLiveSessionAsync(IStreamingTranscriptionSession? session)
+    {
+        if (session is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await session.DisposeAsync();
+        }
+        catch
+        {
+            // Closing the socket is best-effort.
         }
     }
 
@@ -125,8 +206,34 @@ public sealed class BlitztextWorkflowRunner(
     private IReadOnlyList<string> CustomTermsFor(RecordedAudio audio) =>
         audio.Duration.TotalSeconds >= 0.9 ? _settings.TextImprovement.CustomTerms : [];
 
-    private async Task<string> TranscribeAsync(WorkflowType type, RecordedAudio audio, IReadOnlyList<string> customTerms, CancellationToken cancellationToken)
+    private async Task<(string Text, IReadOnlyList<string> CustomTerms)> TranscribeAsync(
+        WorkflowType type,
+        RecordedAudio audio,
+        IStreamingTranscriptionSession? liveSession,
+        CancellationToken cancellationToken)
     {
+        if (liveSession is not null)
+        {
+            try
+            {
+                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                timeout.CancelAfter(LiveCompletionTimeout);
+                var liveText = await liveSession.CompleteAsync(timeout.Token);
+                if (!string.IsNullOrWhiteSpace(liveText))
+                {
+                    return (liveText, _liveCustomTerms);
+                }
+
+                throw new InvalidOperationException("Live-Transkription lieferte keinen Text.");
+            }
+            catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+            {
+                // Fall through to the regular file upload; the recording is still on disk.
+                LiveTranscriptionFailed?.Invoke(this, ex);
+            }
+        }
+
+        var customTerms = CustomTermsFor(audio);
         var request = new TranscriptionRequest(
             audio.FilePath,
             customTerms,
@@ -134,9 +241,10 @@ public sealed class BlitztextWorkflowRunner(
             audio.Duration,
             _settings.App.SelectedLocalTranscriptionModelName);
 
-        return IsLocal(type)
+        var text = IsLocal(type)
             ? await localTranscription.TranscribeAsync(request, cancellationToken)
             : await remoteTranscription.TranscribeAsync(request, cancellationToken);
+        return (text, customTerms);
     }
 
     private async Task<string> RewriteAsync(string phaseMessage, TextRewriteRequest request, CancellationToken cancellationToken)

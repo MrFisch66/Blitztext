@@ -1,8 +1,9 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using Blitztext.Core.Abstractions;
 using Blitztext.Core.Models;
 using Blitztext.Core.Workflows;
+using Blitztext.LocalTranscription;
 
 namespace Blitztext.Windows;
 
@@ -10,7 +11,7 @@ public partial class MainWindow : Window
 {
     private readonly ISettingsStore _settingsStore;
     private readonly ISecretStore _secretStore;
-    private readonly ILocalModelService _localModelService;
+    private readonly LocalTranscriptionService _localModelService;
     private readonly BlitztextWorkflowRunner _runner;
     private readonly IPasteService _pasteService;
     private readonly IStartupService _startupService;
@@ -32,7 +33,7 @@ public partial class MainWindow : Window
     public MainWindow(
         ISettingsStore settingsStore,
         ISecretStore secretStore,
-        ILocalModelService localModelService,
+        LocalTranscriptionService localModelService,
         BlitztextWorkflowRunner runner,
         IPasteService pasteService,
         IStartupService startupService,
@@ -68,6 +69,7 @@ public partial class MainWindow : Window
             HotkeyModeCombo.SelectedItem = _settings.App.HotkeyMode;
             ToneCombo.SelectedItem = _settings.TextImprovement.Tone;
             SecureLocalModeCheckBox.IsChecked = _settings.App.SecureLocalModeEnabled;
+            LiveTranscriptionCheckBox.IsChecked = _settings.App.LiveTranscriptionEnabled;
             LanguageTextBox.Text = _settings.Transcription.Language;
             CustomTermsTextBox.Text = string.Join(", ", _settings.TextImprovement.CustomTerms);
             ContextTextBox.Text = _settings.TextImprovement.Context;
@@ -81,6 +83,7 @@ public partial class MainWindow : Window
             RefreshLocalRuntime();
             RefreshLocalModels();
             await RefreshCredentialStateAsync();
+            _ = _localModelService.PrewarmAsync(_settings.App.SelectedLocalTranscriptionModelName);
         }
         finally
         {
@@ -100,7 +103,8 @@ public partial class MainWindow : Window
     /// </summary>
     public async Task MaybeShowFirstRunOnboardingAsync()
     {
-        if (_localModelService.GetRuntimeInfo().IsInstalled)
+        if (_localModelService.GetRuntimeInfo().IsInstalled ||
+            !_localModelService.RequiresRuntime(_settings.App.SelectedLocalTranscriptionModelName))
         {
             OnboardingHint.Visibility = Visibility.Collapsed;
             return;
@@ -108,8 +112,8 @@ public partial class MainWindow : Window
 
         var firstRun = !_settings.App.HasSeenOnboarding;
         OnboardingHintText.Text = firstRun
-            ? "Willkommen bei Blitztext! Installiere zunächst die whisper.cpp Runtime – sie wird für die Nutzung von Blitztext benötigt."
-            : "Die whisper.cpp Runtime ist noch nicht installiert – sie wird für die Nutzung von Blitztext benötigt.";
+            ? "Willkommen bei Blitztext! Installiere zunächst die whisper.cpp Runtime – sie wird für das ausgewählte lokale Whisper-Modell benötigt."
+            : "Die whisper.cpp Runtime ist noch nicht installiert – sie wird für das ausgewählte lokale Whisper-Modell benötigt.";
         OnboardingHint.Visibility = Visibility.Visible;
 
         MainTabs.SelectedItem = AccountTab;
@@ -435,6 +439,7 @@ public partial class MainWindow : Window
 
         WorkflowSettings.EnsureDefaults(_settings.App);
         _settings.App.SecureLocalModeEnabled = SecureLocalModeCheckBox.IsChecked == true;
+        _settings.App.LiveTranscriptionEnabled = LiveTranscriptionCheckBox.IsChecked == true;
         _settings.App.HotkeyMode = HotkeyModeCombo.SelectedItem is HotkeyMode mode ? mode : HotkeyMode.Hold;
         _settings.Transcription.Language = string.IsNullOrWhiteSpace(LanguageTextBox.Text) ? "de" : LanguageTextBox.Text.Trim();
         _settings.TextImprovement.Tone = ToneCombo.SelectedItem is TextTone tone ? tone : TextTone.Neutral;
@@ -445,9 +450,12 @@ public partial class MainWindow : Window
         _settings.TextImprovement.Context = ContextTextBox.Text.Trim();
         _settings.TextImprovement.SystemPrompt = ImproverPromptTextBox.Text.Trim();
 
-        if (LocalModelCombo.SelectedValue is string selectedModel)
+        if (LocalModelCombo.SelectedValue is string selectedModel &&
+            selectedModel != _settings.App.SelectedLocalTranscriptionModelName)
         {
             _settings.App.SelectedLocalTranscriptionModelName = selectedModel;
+            RefreshLocalModelStatus();
+            _ = _localModelService.PrewarmAsync(selectedModel);
         }
 
         _hotkeyService.Mode = _settings.App.HotkeyMode;
@@ -462,15 +470,17 @@ public partial class MainWindow : Window
         }
 
         var hasApiKey = !string.IsNullOrWhiteSpace(await _secretStore.LoadAsync(SecretKey.OpenAIApiKey));
-        var selectedLocalModelInstalled = _localModelService.IsModelInstalled(_settings.App.SelectedLocalTranscriptionModelName);
-        var localRuntimeInstalled = _localModelService.GetRuntimeInfo().IsInstalled;
+        var selectedModel = _settings.App.SelectedLocalTranscriptionModelName;
+        var selectedLocalModelInstalled = _localModelService.IsModelInstalled(selectedModel);
+        var localRuntimeInstalled = !_localModelService.RequiresRuntime(selectedModel) ||
+                                    _localModelService.GetRuntimeInfo().IsInstalled;
+        var usesLocal = type == WorkflowType.LocalTranscription ||
+                        (type == WorkflowType.Transcription && _settings.App.SecureLocalModeEnabled);
 
         return type switch
         {
-            WorkflowType.LocalTranscription when !localRuntimeInstalled => "whisper.cpp fehlt. Installiere die Runtime im Bereich 'Lokales Whisper'.",
-            WorkflowType.LocalTranscription when !selectedLocalModelInstalled => "Lokales Whisper-Modell fehlt.",
-            WorkflowType.Transcription when _settings.App.SecureLocalModeEnabled && !localRuntimeInstalled => "whisper.cpp fehlt. Installiere die Runtime im Bereich 'Lokales Whisper'.",
-            WorkflowType.Transcription when _settings.App.SecureLocalModeEnabled && !selectedLocalModelInstalled => "Lokales Whisper-Modell fehlt.",
+            _ when usesLocal && !localRuntimeInstalled => "whisper.cpp fehlt. Installiere die Runtime unter 'Konto & Zugang'.",
+            _ when usesLocal && !selectedLocalModelInstalled => "Lokales Modell fehlt. Installiere es unter 'Lokale Modelle'.",
             WorkflowType.Transcription when !_settings.App.SecureLocalModeEnabled && !hasApiKey => "OpenAI API Key fehlt.",
             WorkflowType.TextImprover when _settings.App.SecureLocalModeEnabled => "Blitztext+ ist im sicheren lokalen Modus pausiert.",
             WorkflowType.TextImprover when !hasApiKey => "OpenAI API Key fehlt.",
@@ -493,12 +503,21 @@ public partial class MainWindow : Window
         LocalModelCombo.SelectedValuePath = nameof(LocalModelInfo.Id);
         LocalModelCombo.SelectedValue = _settings.App.SelectedLocalTranscriptionModelName;
 
-        var selected = models.FirstOrDefault(model => model.Id == _settings.App.SelectedLocalTranscriptionModelName);
+        RefreshLocalModelStatus();
+    }
+
+    private void RefreshLocalModelStatus()
+    {
+        var selected = _localModelService.GetModelOptions()
+            .FirstOrDefault(model => model.Id == _settings.App.SelectedLocalTranscriptionModelName);
+        var needsRuntime = selected is not null && _localModelService.RequiresRuntime(selected.Id);
         LocalModelStatusText.Text = selected is null
             ? "Kein lokales Modell ausgewählt."
             : selected.IsInstalled
                 ? $"{selected.DisplayName} ist installiert."
-                : $"{selected.DisplayName} ist noch nicht installiert. whisper-cli.exe muss zusätzlich lokal bereitliegen.";
+                : needsRuntime
+                    ? $"{selected.DisplayName} ist noch nicht installiert. whisper-cli.exe muss zusätzlich lokal bereitliegen."
+                    : $"{selected.DisplayName} ist noch nicht installiert (ca. 670 MB).";
     }
 
     private void RefreshLocalRuntime()

@@ -1,4 +1,4 @@
-<Window x:Class="Blitztext.Windows.MainWindow"
+﻿<Window x:Class="Blitztext.Windows.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:Blitztext.Windows"
@@ -75,7 +75,11 @@
                             </Grid>
                             <CheckBox x:Name="SecureLocalModeCheckBox" Content="Sicherer lokaler Modus"
                                       Checked="SettingsControl_Changed" Unchecked="SettingsControl_Changed" />
-                            <TextBlock Text="Transkribiert ausschließlich lokal mit whisper.cpp – es werden keine Audiodaten an einen Server gesendet."
+                            <TextBlock Text="Transkribiert ausschließlich lokal mit dem unter 'Lokale Modelle' gewählten Modell – es werden keine Audiodaten an einen Server gesendet."
+                                       Style="{StaticResource HelpText}" Margin="0,2,0,0" />
+                            <CheckBox x:Name="LiveTranscriptionCheckBox" Content="Live-Transkription während der Aufnahme" Margin="0,10,0,0"
+                                      Checked="SettingsControl_Changed" Unchecked="SettingsControl_Changed" />
+                            <TextBlock Text="Überträgt die Sprache schon während du sprichst – der Text ist fast sofort nach dem Loslassen da. Fällt bei Problemen automatisch auf die normale Übertragung zurück."
                                        Style="{StaticResource HelpText}" Margin="0,2,0,0" />
                         </StackPanel>
                     </Border>
@@ -137,7 +141,7 @@
                                            Foreground="#3730A3" FontWeight="Medium" />
                             </Border>
 
-                            <TextBlock Text="whisper.cpp wird für die Nutzung von Blitztext benötigt und muss einmalig installiert werden."
+                            <TextBlock Text="whisper.cpp wird nur für die lokalen Whisper-Modelle benötigt (nicht für Parakeet) und muss dafür einmalig installiert werden."
                                        Style="{StaticResource HelpText}" Margin="0,0,0,8" />
                             <TextBlock x:Name="LocalRuntimeStatusText" Style="{StaticResource HelpText}" Margin="0,0,0,8" />
                             <Button x:Name="InstallRuntimeButton" Content="whisper.cpp installieren"
@@ -182,7 +186,7 @@
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
                             <TextBlock Text="Eigennamen &amp; Fachbegriffe" Style="{StaticResource SectionTitle}" />
-                            <TextBlock Text="Diese Begriffe werden bei der Spracherkennung (auch lokal) und bei Blitztext+ bevorzugt in genau dieser Schreibweise verwendet."
+                            <TextBlock Text="Diese Begriffe werden bei der Spracherkennung (lokal nur mit Whisper-Modellen, nicht mit Parakeet) und bei Blitztext+ bevorzugt in genau dieser Schreibweise verwendet."
                                        Style="{StaticResource HelpText}" Margin="0,0,0,8" />
 
                             <TextBlock Text="Begriffe, kommagetrennt (z. B. GrumBuddy, Blitztext)" Style="{StaticResource FieldLabel}" />

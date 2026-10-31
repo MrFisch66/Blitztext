@@ -1,4 +1,4 @@
-using System.Net.Http;
+﻿using System.Net.Http;
 using System.Windows;
 using Blitztext.Core.Abstractions;
 using Blitztext.Core.Services;
@@ -17,6 +17,7 @@ public partial class App : System.Windows.Application
     private WindowsHotkeyService? _hotkeyService;
     private WindowsAudioRecorder? _recorder;
     private BlitztextWorkflowRunner? _runner;
+    private LocalTranscriptionService? _localTranscription;
 
     protected override async void OnStartup(StartupEventArgs e)
     {
@@ -71,7 +72,10 @@ public partial class App : System.Windows.Application
     {
         var secretStore = new CredentialManagerSecretStore();
         var settingsStore = new JsonSettingsStore(WindowsPaths.SettingsPath);
-        var localTranscription = new WhisperCppLocalTranscriptionService(WindowsPaths.AppDataDirectory);
+        var localTranscription = new LocalTranscriptionService(
+            new ParakeetLocalTranscriptionService(WindowsPaths.AppDataDirectory),
+            new WhisperCppLocalTranscriptionService(WindowsPaths.AppDataDirectory));
+        _localTranscription = localTranscription;
         _recorder = new WindowsAudioRecorder();
         _hotkeyService = new WindowsHotkeyService();
 
@@ -82,7 +86,12 @@ public partial class App : System.Windows.Application
             new HttpClient { Timeout = TimeSpan.FromSeconds(60) },
             cancellationToken => secretStore.LoadAsync(SecretKey.OpenAIApiKey, cancellationToken));
 
-        _runner = new BlitztextWorkflowRunner(_recorder, remoteTranscription, localTranscription, rewriteClient);
+        var liveTranscription = new OpenAIRealtimeTranscriptionClient(
+            cancellationToken => secretStore.LoadAsync(SecretKey.OpenAIApiKey, cancellationToken));
+
+        _runner = new BlitztextWorkflowRunner(_recorder, remoteTranscription, localTranscription, rewriteClient, liveTranscription);
+        _runner.LiveTranscriptionFailed += (_, ex) =>
+            AppLog.Error("LiveTranscription", ex, "Live-Transkription fehlgeschlagen, Aufnahme wird als Datei übertragen.");
         var pasteService = new WindowsPasteService();
         var executablePath = Environment.ProcessPath
             ?? System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName
@@ -155,6 +164,7 @@ public partial class App : System.Windows.Application
         _notifyIcon?.Dispose();
         _hotkeyService?.Dispose();
         _recorder?.Dispose();
+        _localTranscription?.Dispose();
         base.OnExit(e);
     }
 

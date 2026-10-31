@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO.Compression;
 using System.Text.Json;
 using Blitztext.Core.Abstractions;
@@ -44,6 +44,8 @@ public sealed class WhisperCppLocalTranscriptionService : ITranscriptionBackend,
     }
 
     public bool IsModelInstalled(string modelName) => File.Exists(ModelPath(NormalizeModelName(modelName)));
+
+    public bool RequiresRuntime(string modelName) => true;
 
     public LocalRuntimeInfo GetRuntimeInfo() => new(File.Exists(_executablePath), _executablePath);
 
@@ -229,40 +231,60 @@ public sealed class WhisperCppLocalTranscriptionService : ITranscriptionBackend,
 
     private async Task<string> ResolveRuntimeAssetUrlAsync(CancellationToken cancellationToken)
     {
+        // Since v1.9.5 the versioned whisper.cpp release ("latest") carries no binaries; they are
+        // published on separate build releases ("bNNNN"). Walk the recent releases and take the
+        // newest one that actually ships a Windows CPU build.
         using var response = await _httpClient.GetAsync(
-            "https://api.github.com/repos/ggml-org/whisper.cpp/releases/latest",
+            "https://api.github.com/repos/ggml-org/whisper.cpp/releases?per_page=20",
             cancellationToken);
         response.EnsureSuccessStatusCode();
 
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
         using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-        var assets = document.RootElement.GetProperty("assets").EnumerateArray();
-        var preferredName = Environment.Is64BitProcess ? "whisper-bin-x64.zip" : "whisper-bin-Win32.zip";
 
-        foreach (var asset in assets)
+        foreach (var release in document.RootElement.EnumerateArray())
         {
-            if (asset.GetProperty("name").GetString()?.Equals(preferredName, StringComparison.OrdinalIgnoreCase) == true)
+            if (release.TryGetProperty("draft", out var draft) && draft.GetBoolean())
             {
-                return asset.GetProperty("browser_download_url").GetString()
-                    ?? throw new InvalidOperationException("Das whisper.cpp Release-Asset hat keine Download-URL.");
+                continue;
+            }
+
+            if (release.TryGetProperty("assets", out var assets) && FindRuntimeAssetUrl(assets) is { } url)
+            {
+                return url;
             }
         }
 
-        assets = document.RootElement.GetProperty("assets").EnumerateArray();
-        foreach (var asset in assets)
+        throw new InvalidOperationException("Kein passendes Windows-Release von whisper.cpp gefunden.");
+    }
+
+    private static string? FindRuntimeAssetUrl(JsonElement assets)
+    {
+        var preferredName = Environment.Is64BitProcess ? "whisper-bin-x64.zip" : "whisper-bin-Win32.zip";
+
+        foreach (var asset in assets.EnumerateArray())
+        {
+            if (asset.GetProperty("name").GetString()?.Equals(preferredName, StringComparison.OrdinalIgnoreCase) == true)
+            {
+                return asset.GetProperty("browser_download_url").GetString();
+            }
+        }
+
+        foreach (var asset in assets.EnumerateArray())
         {
             var name = asset.GetProperty("name").GetString() ?? string.Empty;
             if (name.Contains("whisper-bin", StringComparison.OrdinalIgnoreCase) &&
                 name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) &&
                 !name.Contains("blas", StringComparison.OrdinalIgnoreCase) &&
+                !name.Contains("cuda", StringComparison.OrdinalIgnoreCase) &&
+                !name.Contains("arm64", StringComparison.OrdinalIgnoreCase) &&
                 (Environment.Is64BitProcess ? name.Contains("x64", StringComparison.OrdinalIgnoreCase) : name.Contains("Win32", StringComparison.OrdinalIgnoreCase)))
             {
-                return asset.GetProperty("browser_download_url").GetString()
-                    ?? throw new InvalidOperationException("Das whisper.cpp Release-Asset hat keine Download-URL.");
+                return asset.GetProperty("browser_download_url").GetString();
             }
         }
 
-        throw new InvalidOperationException("Kein passendes Windows-Release von whisper.cpp gefunden.");
+        return null;
     }
 
     private async Task DownloadFileAsync(

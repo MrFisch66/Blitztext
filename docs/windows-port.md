@@ -43,11 +43,26 @@ The publish output is written to `artifacts/windows/win-x64`.
   before the paste and restored afterwards, so dictation never clobbers the clipboard.
 - Temporary recordings are WAV files under `%LOCALAPPDATA%\Blitztext\cache`.
 
+## Cloud Transcription
+
+- Files are transcribed with OpenAI `gpt-transcribe`; custom terms are sent as `keywords`.
+- With *Live-Transkription während der Aufnahme* (default on), audio is streamed while recording to
+  `gpt-live-transcribe` over the Realtime API (WebSocket, 24 kHz PCM, resampled from the 16 kHz
+  capture). Releasing the hotkey only commits the buffer, so the text arrives about half a second
+  later. If the live session fails or does not finish within 5 s, the recorded WAV is uploaded as a
+  file instead (logged as an error in `blitztext.log`).
+
 ## Local Transcription
 
-The Windows local path uses `whisper.cpp` instead of WhisperKit/CoreML. Models are downloaded on demand to `%LOCALAPPDATA%\Blitztext\models\whispercpp`.
-
-The app can install the official Windows `whisper.cpp` runtime from the latest `ggml-org/whisper.cpp` GitHub release into `%LOCALAPPDATA%\Blitztext\tools\whispercpp`. If you prefer a custom runtime, set `BLITZTEXT_WHISPER_CPP` to an existing `whisper-cli.exe`.
+- **Parakeet TDT 0.6B v3** (default, recommended) runs in-process via sherpa-onnx (int8 ONNX, CPU).
+  The model stays loaded, so a dictation only pays for decoding (~0.4 s for 10 s of speech on a
+  Ryzen 9 7900X). It is downloaded on demand (~670 MB) to
+  `%LOCALAPPDATA%\Blitztext\models\parakeet`. Custom terms are not applied to Parakeet.
+- **Whisper** models (Small, Medium, Large v3 Turbo) use `whisper.cpp`. Models are downloaded on
+  demand to `%LOCALAPPDATA%\Blitztext\models\whispercpp`. The app installs the official Windows
+  CPU runtime from the newest `ggml-org/whisper.cpp` build release (`bNNNN`; the versioned `v1.9.x`
+  releases no longer carry binaries) into `%LOCALAPPDATA%\Blitztext\tools\whispercpp`. If you
+  prefer a custom runtime, set `BLITZTEXT_WHISPER_CPP` to an existing `whisper-cli.exe`.
 
 ## Store Packaging
 
