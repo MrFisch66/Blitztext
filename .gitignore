@@ -18,6 +18,9 @@ Blitztext.app
 dist/
 artifacts/
 models/
+# "models/" is meant for downloaded speech models. On case-insensitive file systems it also
+# matched the C# source folder "Models", which therefore never made it into the repository.
+!src/Blitztext.Core/Models/
 *.mlmodel
 *.mlmodelc/
 *.mlpackage/
